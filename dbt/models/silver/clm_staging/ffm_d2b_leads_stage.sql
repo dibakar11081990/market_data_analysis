@@ -1,0 +1,242 @@
+-- =============================================================================
+-- LAYER  : Silver — Staging
+-- MODEL  : FFM_D2B_LEADS_STAGE (CLM / FFM pipeline stage)
+-- NOTES  : Intermediate staging model; feeds gold fact tables
+-- =============================================================================
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+{# Set the right tag #}
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+{# Set the configuration #}
+{{
+    config(
+        materialized='table'
+    )
+}}
+
+{# Set Date variables #}
+{{
+  config(
+    pre_hook = [
+        "SET START_DATE = (SELECT CALENDAR_DATE FROM ADP_PUBLISH.COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY WHERE FISCAL_QUARTER_VS_CURRENT_NUMBER = -12 AND FISCAL_QUARTER_DAY_NUMBER = 1);"
+        "SET END_DATE = (SELECT CURRENT_DATE());"
+    ]
+  )
+}}
+
+{# Set the post pipeline configuration #}
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_QA"
+    ]
+  )
+}}
+
+WITH DATE_HIERARCHY AS (
+    SELECT
+        DISTINCT DATE_KEY,
+        WEEK_NUMBER_FISCAL_QUARTER AS FYQUARTER_WEEK,
+        MONTH_NUMBER_IN_FISCAL_YEAR AS FYMONTH,
+        FISCAL_YEAR_AND_FISCAL_QUARTER_NAME AS FYQUARTER,
+        FISCAL_YEAR_NAME AS FYYEAR
+    FROM
+        {{ ref('LOOKUP_FINANCE_CALENDAR') }}
+    WHERE
+        DATE_KEY BETWEEN $START_DATE AND $END_DATE
+),
+PRODUCT AS (
+    SELECT
+        TRIM(NULLIF(PRODUCT, 'N/A')) AS PRODUCT,
+        TRIM(PRODUCT_CODE) AS PRODUCT_CODE,
+        TRIM(NULLIF(SOLUTION_DIVISION, 'N/A')) AS PRODUCT_INDUSTRY,
+        TRIM(NULLIF(PRODUCT_GROUPING, 'N/A')) AS PRODUCT_FAMILY,
+        ROW_NUMBER() OVER(
+            PARTITION BY PRODUCT_CODE
+            ORDER BY
+                UPDATED_DATE DESC NULLS LAST
+        ) AS RN
+    FROM
+        {{ var('LOOKUPS.MPM_PRODUCT_LOOKUP') }}
+    QUALIFY RN = 1
+),
+D2B_NON_DELIVERED_LEADS AS (
+    SELECT
+        DISTINCT
+        D2B.MARKETO_LEAD_ID,
+        D2B.SNAPSHOT_DATE,
+        D2B.D2B_SCORE,
+        D2B.COUNTRY,
+        D2B.GEO,
+        D2B.D2B_INDUSTRY_PROD,
+        D2B.D2B_RECENT_PI
+    FROM
+        (
+            SELECT
+                {# TRY_TO_NUMBER(CAST(BSM_ID AS VARCHAR)) AS MARKETO_LEAD_ID, #}
+                CAST(TO_NUMERIC(BSM_ID) AS VARCHAR) AS MARKETO_LEAD_ID,
+                SNAPSHOT_DATE,
+                TO_NUMBER(SCORE) AS D2B_SCORE,
+                NULLIF(COUNTRY, 'n/a') AS COUNTRY,
+                NULLIF(UPPER(GEO), 'N/A') AS GEO,
+                INDUSTRY_PROD AS D2B_INDUSTRY_PROD,
+                LAST_CURRENT_PRODUCT_INTEREST AS D2B_RECENT_PI,
+                ROW_NUMBER () OVER(
+                    PARTITION BY BSM_ID, GEO, INDUSTRY_PROD
+                    ORDER BY
+                        SNAPSHOT_DATE DESC
+                ) RN
+            FROM
+                {{ var('MARKETO_INTERGATION.ALL_LEADS_SNAPSHOT') }}
+            WHERE
+                SNAPSHOT_DATE BETWEEN $START_DATE AND $END_DATE
+            QUALIFY RN = 1
+        ) D2B
+        LEFT JOIN (
+            SELECT
+                DISTINCT
+                    {# TRY_TO_NUMBER(CAST(MARKETO_LEAD_ID__C AS VARCHAR)) AS MARKETO_LEAD_ID__C #}
+                    MARKETO_LEAD_ID__C
+            FROM
+                {{ var('LEAD_SFDC_RAW') }}
+            WHERE
+                REGEXP_LIKE(MARKETO_LEAD_ID__C, '^[0-9]+$')
+        ) LEADS ON LEADS.MARKETO_LEAD_ID__C = D2B.MARKETO_LEAD_ID
+    WHERE
+        D2B.D2B_SCORE >= 7
+        AND LEADS.MARKETO_LEAD_ID__C IS NULL -- Pick only leads not delivered to SFDC
+),
+MARKETO_D2B_LEADS AS (
+SELECT
+    DISTINCT L.ID AS LEAD_ID,
+    D2B.SNAPSHOT_DATE AS RECEIVED_DATE,
+    DT.FYQUARTER_WEEK,
+    DT.FYMONTH,
+    DT.FYQUARTER,
+    DT.FYYEAR,
+    D2B.COUNTRY AS D2B_COUNTRY,
+    D2B.GEO AS D2B_GEO,
+    L.COUNTRY AS LEAD_COUNTRY,
+    COALESCE(D2B.COUNTRY, L.COUNTRY) AS COUNTRY,
+    L.COUNTRY_ISO_CODE,
+    -- L.NAMED_ACCOUNT_GROUP,
+    NR.NAG_REPLACEMENT AS NAMED_ACCOUNT_GROUP,
+
+    CASE
+        -- added new changes for GreenField MOTMDSA2336
+        -- WHEN LOWER(ACCOUNTS.NAMED_ACCOUNT_GROUP) NOT IN ('territory','greenfield') AND ACCOUNTS.NAMED_ACCOUNT_GROUP IS NOT NULL
+        -- removing Greenfield from Territory bkt and including it in ABSM bkt MOTMDSA2449
+        WHEN LOWER(ACCOUNTS.NAMED_ACCOUNT_GROUP) <> 'territory' AND ACCOUNTS.NAMED_ACCOUNT_GROUP IS NOT NULL
+
+            THEN ACCOUNTS.NAMED_ACCOUNT_GROUP
+
+        -- added new changes for GreenField MOTMDSA2336
+        -- WHEN LOWER(ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP) NOT IN ('territory', 'greenfield') AND ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP IS NOT NULL
+        -- removing Greenfield from Territory bkt and including it in ABSM bkt MOTMDSA2449
+        WHEN LOWER(ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP) <> 'territory' AND ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP IS NOT NULL
+
+            THEN ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP
+        ELSE 'Territory'
+    END AS LEAD_NAG_KEY,
+    L.ACCOUNT_CSN,
+    COALESCE(ACCOUNTS.ACCOUNT_NAME, L.ACCOUNT_NAME) AS ACCOUNT_NAME,
+    ACCOUNTS.A_OWNER_MOD AS ACCOUNT_OWNER_NAME,
+    ACCOUNTS.CORPORATE_PARENT_ACCOUNT_NAME AS PARENT_ACCOUNT_NAME,
+    COALESCE(
+        ACCOUNTS.CORPORATE_PARENT_ACCOUNT_CSN,
+        L.PARENT_ACCOUNT_CSN
+    ) AS PARENT_ACCOUNT_CSN,
+    L.LAST_CURRENT_PRODUCT_INTEREST,
+    COALESCE(PR.PRODUCT, L.LAST_CURRENT_PRODUCT_INTEREST) AS MOST_RECENT_PI,
+    CASE
+        WHEN PR.PRODUCT = 'TOKEN FLEX' THEN 'AEC'
+        ELSE PR.PRODUCT_INDUSTRY
+    END AS MOST_RECENT_PI_INDUSTRY,
+    PR.PRODUCT_FAMILY AS MOST_RECENT_PRODUCT_FAMILY,
+    D2B.D2B_INDUSTRY_PROD,
+    D2B.D2B_RECENT_PI,
+    D2B.D2B_SCORE::VARCHAR AS D2B_SCORE
+FROM
+    {{ var('LEAD_MARKETO_LATEST') }} L
+    INNER JOIN D2B_NON_DELIVERED_LEADS D2B ON D2B.MARKETO_LEAD_ID = L.ID
+    LEFT JOIN (
+        SELECT
+            ac.ACCOUNT_CSN,
+            ac.ACCOUNT_NAME,
+            ac.OWNER_ID,
+            ac.NAMED_ACCOUNT_GROUP,
+            ac.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP,
+            ac.GEO,
+            ac.SFDC_ACCOUNT_ID,
+            ac.COUNTRY,
+            ac.CORPORATE_PARENT_ACCOUNT_NAME,
+            ac.CORPORATE_PARENT_ACCOUNT_CSN,
+            ac.TSE_ASSIGNED_ACCOUNT,
+            CASE
+                WHEN ao.IS_ACTIVE = 'true' THEN ao.NAME
+                ELSE CONCAT (ao.NAME, ' (inactive)')
+            END AS A_OWNER_MOD
+        FROM
+            {{ var('ACCOUNTS_WITH_CORPORATE_PARENTS') }} ac
+            LEFT JOIN {{ var('SALESFORCE.USER') }} ao ON ac.OWNER_ID = ao.ID
+    ) ACCOUNTS ON ACCOUNTS.ACCOUNT_CSN = L.ACCOUNT_CSN
+    -- Join with Product lookup
+    LEFT JOIN PRODUCT PR ON UPPER(L.LAST_CURRENT_PRODUCT_INTEREST) = UPPER(PR.PRODUCT_CODE)
+    -- Join with Date Dimensions
+    LEFT JOIN DATE_HIERARCHY DT ON DATE(D2B.SNAPSHOT_DATE) = DATE(DT.DATE_KEY)
+    LEFT JOIN RAW.LOOKUPS.NAG_REPLACEMENT_MAPPING NR ON L.NAMED_ACCOUNT_GROUP = NR.NAG
+)
+
+SELECT
+    LEAD_ID,
+    RECEIVED_DATE,
+    FYQUARTER_WEEK,
+    FYMONTH,
+    FYQUARTER,
+    FYYEAR,
+    COALESCE(D2B_CNTRY_GEO.COUNTRY, LEAD_CNTRY_GEO.COUNTRY) AS COUNTRY,
+    COALESCE(D2B_CNTRY_GEO.GEO, D2B_GEO, LEAD_CNTRY_GEO.GEO) AS GEO,
+    -- CASE
+    --     WHEN COALESCE(D2B_CNTRY_GEO.GEO, D2B_GEO, LEAD_CNTRY_GEO.GEO) = 'EMEA' THEN 'GDPR'
+    --     ELSE COALESCE(D2B_CNTRY_GEO.GDPR_FLAG, 'NON-GDPR')
+    -- END AS GDPR_FLAG, -- Fallback method if Country not mapped with Lookup Table
+    COALESCE(D2B_CNTRY_GEO.GDPR_FLAG, LEAD_CNTRY_GEO.GDPR_FLAG, 'NON-GDPR') AS GDPR_FLAG,
+    CONCAT(
+        COALESCE(D2B_CNTRY_GEO.COUNTRY, LEAD_CNTRY_GEO.COUNTRY, 'NA'),
+        '_',
+        COALESCE(D2B_CNTRY_GEO.GEO, D2B_GEO, LEAD_CNTRY_GEO.GEO, 'NA')
+    ) AS COUNTRY_GEO_KEY,
+    D2B_COUNTRY,
+    D2B_CNTRY_GEO.COUNTRY AS D2B_COUNTRY_MAPPED,
+    D2B_GEO,
+    LEAD_COUNTRY,
+    LEAD_CNTRY_GEO.COUNTRY AS LEAD_COUNTRY_MAPPED,
+    COUNTRY_ISO_CODE,
+    NAMED_ACCOUNT_GROUP,
+    LEAD_NAG_KEY,
+    ACCOUNT_CSN,
+    ACCOUNT_NAME,
+    ACCOUNT_OWNER_NAME,
+    PARENT_ACCOUNT_NAME,
+    PARENT_ACCOUNT_CSN,
+    LAST_CURRENT_PRODUCT_INTEREST,
+    MOST_RECENT_PI,
+    MOST_RECENT_PI_INDUSTRY,
+    MOST_RECENT_PRODUCT_FAMILY,
+    D2B_SCORE,
+    D2B_INDUSTRY_PROD,
+    D2B_RECENT_PI,
+    CURRENT_TIMESTAMP AS RUN_TIMESTAMP
+FROM
+    MARKETO_D2B_LEADS LEADS
+    -- Join with Country Geo Lookup using Lead Country from Marketo
+    LEFT JOIN {{ ref('DIM_FFM_COUNTRY_VW') }} LEAD_CNTRY_GEO ON UPPER(LEADS.LEAD_COUNTRY) = UPPER(LEAD_CNTRY_GEO.COUNTRY_SEARCH_CODE)
+    -- Join with Country Geo Lookup using D2B Lead Country
+    LEFT JOIN {{ ref('DIM_FFM_COUNTRY_VW') }} D2B_CNTRY_GEO ON UPPER(LEADS.D2B_COUNTRY) = UPPER(D2B_CNTRY_GEO.COUNTRY_SEARCH_CODE)

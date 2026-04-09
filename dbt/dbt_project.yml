@@ -1,0 +1,429 @@
+# This configuration file specifies information about your package
+# that dbt needs in order to build your models. This file is _required_
+
+#########################
+#### PROJECT DETAILS ####
+#########################
+
+# name: Required. This is the name used to reference your package in the configs
+# below. Package names must only contain letters and underscores
+name: 'marketing'
+
+# version: Required. This indicates the current version of your package and
+# should conform to semantic versioning. The field is currently unused
+version: '1.0'
+
+
+####################################
+#### CONNECTION CONFIGURATIONS #####
+####################################
+
+# profile: Required. This config specifies which profile dbt should use to
+# connect to your data warehouse. The provided value must exist in the
+# profiles.yml file.
+profile: 'default'
+
+
+##################################
+#### FILE PATH CONFIGURATIONS ####
+##################################
+
+# The following configs specify directories that dbt uses to operate. All
+# paths are specified relative to the path of dbt_project.yml.
+
+# ALL FILE PATH CONFIGURATIONS ARE OPTIONAL, the default values are listed below.
+
+# source-paths: Specify which path(s) dbt should look in to find models. Model
+# are.sql files. Model and source schema files (.yml files) should also be
+# included in this path
+model-paths: ["models"]
+
+# analysis-paths: Specify which path(s) dbt should look in to find analytical
+# queries. These queries are compiled, but not executed, by dbt.
+analysis-paths: ["analysis"]
+
+# test-paths: Specify which path(s) dbt should look in to find data test
+# definitions.
+test-paths: ["tests"]
+
+# data-paths: Specify which path(s) dbt should look in to find CSV files.
+# Running `dbt seed` will load these CSVs as tables in your warehouse.
+seed-paths: ["seeds"]
+
+# macro-paths: Specify which path(s) dbt should look in to find macros. These
+# macros will be globally available to all models in your project.
+macro-paths: ["macros"]
+
+# snapshot-paths: Specify with path(s) dbt should look in to finds napshots.
+# Running `dbt snapshot` will run these snapshots.
+#snapshot-paths: ["snapshots"]
+
+# target-path: Specify which path dbt should write  compiled SQL to.
+target-path: "target"
+
+# log-path: Specify which path dbt should write debug logs to.
+log-path: "logs"
+
+# modules-path: Specify which path dbt should use for storing and finding modules.
+# modules-path: "dbt_modules"
+
+# clean-targets: Specify which path(s) should be removed by the clean task. Run
+# `dbt clean` to delete these directories
+clean-targets:
+    - "target"
+    - "dbt_packages"
+
+
+#################################
+#### RESOURCE CONFIGURATIONS ####
+#################################
+
+models:
+  # common settings.
+  materialized: table
+  transient: false
+  marketing:
+
+      # Applies to all files under models/lookups/
+      lookups:
+        materialized: ephemeral
+
+      fact_mpm:
+
+
+      mpm_exchange:
+
+
+      mpm_stack:
+
+seeds:
+  marketing:
+    lookups: #Applies to all files under seeds/lookups/
+      +database: RAW
+      +schema: LOOKUPS
+    digital_services: #Applies to all files under seeds/digital_services/
+      #List of Ad Accounts in scope for Digital Services
+      +database: RAW
+      +schema: DIGITAL_SERVICES
+
+#  END OF CONFIG.
+
+# Common Variables.
+vars:
+    "historic_refresh": null
+    "START_DATE": null
+    "END_DATE": null
+    "SPEND_LEGACY": null
+    
+    # Amplify ABM date variables range, end date will be from start date only
+    "start_dt": -7
+    "last_90_days": -97
+    "last_270_days": -277
+    "last_820_days": -827
+    "last_455_days": -462
+
+    # Project vars
+    "STACK_LEGACY_CUTOFF_DATE": "2020-01-31"
+    "S3_EXTERNAL_TABLE_SCHEMA": "RAW.AWS_S3"
+    "S3_EXTERNAL_SCHEMA_TEST": "RAW.AWS_S3_STG"
+    
+    # Job Tags
+    "TAG_S3LOAD_SFDC": "s3load_sfdc"
+    "TAG_S3LOAD_MARKETO": "s3load_marketo"
+    "TAG_S3LOAD_ADOBE": "s3load_adobe"
+    "TAG_S3LOAD_MARKETO_INTRADAY": "s3load_marketo_intraday"
+    "TAG_EXTTBL_SFDC": "exttbl_sfdc"
+    "TAG_EXTTBL_MARKETO": "exttbl_marketo"
+    "TAG_EXTTBL_MARKETO_INTRADAY": "exttbl_marketo_intraday"
+    "TAG_EXTTBL_ADOBE": "exttbl_adobe"
+    "TAG_DS_SFDC": "mpm_ds_sfdc"
+    "TAG_DS_MARKETO": "mpm_ds_marketo"
+    "TAG_DS_MARKETO_INTRADAY": "mpm_ds_marketo_intraday"
+    "TAG_DS_IMPRESSION": "mpm_ds_impression"
+    "TAG_DS_AAS": "mpm_ds_aas"
+    "TAG_DS_ADOBE": "mpm_ds_adobe"
+    "TAG_MPM_DIGITAL_SPEND": "mpm_digital_spend"
+    "TAG_MPM_ARIBA_SPEND": "mpm_ariba_spend"
+    "TAG_MPM_EXCHANGE_ATTRIBUTION": "mpm_exchange_attribution"
+    "TAG_MPM_EXCHANGE_FA_ATTRIBUTION": "mpm_exchange_fa_attribution"
+    "TAG_MPM_EXCHANGE_ALLOCADIA": "mpm_exchange_allocadia"
+    "TAG_MPM_FACT": "mpm_fact"
+    "TAG_MPM_FACT_WEEKLY": "mpm_fact_weekly" ## WEEKLY RUN MODELS
+    "TAG_MPM_FACT_MONTHLY": "mpm_fact_monthly" ## MONTHLY RUN MODELS
+    "TAG_MPM_FACT_DEPS": "mpm_fact_deps"
+    "TAG_MPM_FACT_ACCOUNT_INSIGHTS": "mpm_fact_accountinsights"
+    "TAG_MPM_FACT_USER_INSIGHTS": "mpm_fact_userinsights"
+    "TAG_MPM_FACT_LEAD_INSIGHTS": "mpm_fact_leadinsights"
+    "TAG_MPM_FACT_INTERIM": "mpm_fact_interim"
+    "TAG_MPM_FACT_TOTAL": "mpm_fact_total"
+    "TAG_ENGAGEMENT_SCORE": "engagement_score"
+    "TAG_ENGAGEMENT_SCORE_V2": "engagement_score_v2"
+    "TAG_DIGITAL_EXECUTION_SYSTEMS": "digital_execution_systems"
+    "TAG_DIGITAL_SERVICES_BRAND": "digital_services_brand"
+    "TAG_DIGITAL_SERVICES_OP": "digital_services_op"
+    "TAG_FULL_REFRESH_DIGITAL_EXECUTION_SYSTEMS": "full_refresh_digital_execution_systems"
+    "TAG_FACT_ALPHA": "fact_alpha"
+    "TAG_FACT_CUSTOMER_LIFECYCLE_VAULT": "customer_lifecycle"
+    "TAG_FACT_ALPHA_CSN": "fact_alpha_csn"
+    "TAG_FACT_VOLTRON_REVIVE": "fact_voltron"
+    "TAG_FACT_VOLTRON": "tag_dummy"
+    "TAG_FACT_VOLTRON_SALES": "tag_dummy"
+    "TAG_FACT_ALPHA_LUMOS": "fact_alpha_lumos"
+    "TAG_FACT_ALPHA_ENGMNT": "fact_alpha_engmnt"
+    "TAG_FACT_EXECUTIVE_SUMMARY_GDG": "fact_executive_summary_gdg"
+    "TAG_FACT_GDGEMAIL": "TAG_FACT_GDGEMAIL"
+    "TAG_DUMMY": "tag_dummy"
+    "TAG_GDG_6SENSE": "tag_gdg_6sense"
+    "TAG_GDG_CURRENT_QUARTER_FC": "tag_gdg_current_quarter_fc"
+    "TAG_FACT_ALPHA_LEAD_TRAIL": "fact_alpha_leads_and_trails"
+    "TAG_VIEW_ADP": "tag_adp_views"
+    "TAG_FACT_KYA": "kya_fact"
+    "TAG_FACT_KYA_STAGE": "kya_fact_stage"
+    "TAG_FACT_KYA_ONLY": "kya_fact_only"
+    "TAG_FACT_KYA_BRIDGES": "kya_fact_bridges"
+    "TAG_FACT_KYA_PERFORMANCE": "kya_performance"
+    "TAG_BSD_PUBLISH_VIEWS": "tag_bsd_publish_views"
+    "TAG_FACT_LEAD_SCORING": "lead_insights"
+    "TAG_KYA_AU": "kya_au"
+    "TAG_KYA_EVT": "kya_evt"
+    "TAG_PERF": "kya_perf"
+    "TAG_POLARIS_PHASE_TIMELINE_FACT": "polaris_phase_timeline_fact"
+    "TAG_POLARIS_TRIAL_FACT": "polaris_trial_fact"
+    "TAG_POLARIS_ENTITLEMENT_FACT": "polaris_entitlement_fact"
+    "TAG_POLARIS_CONV_FACT": "polaris_conv_fact"
+    "TAG_POLARIS_WEB_ANALYTICS_FACT": "polaris_web_analytics_fact"
+    "TAG_POLARIS_ENGAGEMENT_FACT": "polaris_engagement_fact"
+    "TAG_POLARIS_EBA_FACT": "polaris_eba_fact"
+    "TAG_AEX_DRUPAL": "aex_drupal"
+    "TAG_FACT_MC_EBA": "mc_eba"
+    "TAG_CPG_CHAT_HISTORY": "cpg_chat_history"
+    "TAG_FACT_GCLID": "fact_gclid"
+    "TAG_FACT_AP_ABSM_TERRITORY": "fact_ap_absm_territory"
+    "TAG_RR_PUBLIC" : "TAG_RR_PUBLIC"
+    "TAG_GLOI" : "tag_gloi"
+    "TAG_FACT_KYA_SANDBOX" : "kya_sandbox"
+    "TAG_COREDATASET_MARKETABILITY" : "coredatasets"
+    "TAG_LEADS_FUNNEL" : "leads_funnel"
+    "SUBSCRIPTION_CUTOFF" : "2023-11-12"
+    "TAG_SNOWFLAKE_COPY_TO_S3": "snowflake_copy_to_s3"
+    "TAG_GLOBAL_CC_VIEW" : "tag_global_cc_view"
+    "TAG_AUDIENCE_CENTRICITY": "audience_centricity"
+    "TAG_FF_CAMPAIGN_REPORTING": "ff_campaign_reporting"
+    "TAG_FF_CAMPAIGN_REPORTING_STAR_SCHEMA": "ff_campaign_reporting_star_schema"
+    "TAG_E2O" : "tag_e2o"
+
+
+
+    "TAG_DS_ADOBE": "mpm_ds_adobe"
+    "TAG_DS_MARKETO_INTRADAY" : "mpm_ds_marketo_intraday"
+
+    "TAG_LEADS_DQ" : "tag_leads_dq"
+
+    "TAG_CAMPAIGN_REPORT": "campaign_report"
+    "TAG_MARKETO_S3_COPY": "marketo_s3_copy"
+    "TAG_S3LOAD_MARKETO_INTRADAY": "s3load_marketo_intraday"
+    "TAG_DS_MARKETO_INTRADAY": "mpm_ds_marketo_intraday"
+    "TAG_EXTTBL_MARKETO_INTRADAY": "exttbl_marketo_intraday"
+
+    "TAG_PERSONA_PBI_OMNI_MKTO_ID" : "persona_pbi_omni_mkto_id"
+    "TAG_MDF" : "mdf"
+    "TAG_FUNNEL_OF_ENGAGED_CONTACTS": "funnel_of_engaged_contacts"
+    "TAG_FULL_FUNNEL_METRICS": "full_funnel_metrics"
+    "TAG_FULL_FUNNEL_METRICS_PRE_CHECKS": "full_funnel_metrics_pre_checks"
+
+    "TAG_AMPLIFY_ABM" : "amplify_abm"
+    "TAG_AMPLIFY_ABM_MM_1" : "amplify_abm_mm_1"
+    "TAG_AMPLIFY_ABM_MM_2" : "amplify_abm_mm_2"
+    "TAG_AMPLIFY_ABM_MM_3" : "amplify_abm_mm_3"
+    "TAG_AMPLIFY_ABM_NA_1" : "amplify_abm_na_1"
+    "TAG_AMPLIFY_ABM_NA_2" : "amplify_abm_na_2"
+    "TAG_AMPLIFY_ABM_NA_3" : "amplify_abm_na_3"
+    "TAG_AMPLIFY_ABM_ST_1" : "amplify_abm_st_1"
+    "TAG_AMPLIFY_ABM_ST_2" : "amplify_abm_st_2"
+    "TAG_AMPLIFY_ABM_ST_3" : "amplify_abm_st_3"
+    "TAG_AMPLIFY_SURGE" : "amplify_surge"
+    "TAG_AMPLIFY_FINAL_LAYER" : "amplify_final_layer"
+    "TAG_AMPLIFY_ABM_PERSONA" : "amplify_abm_persona"
+    "TAG_AMPLIFY_SIGMA_REPORT" : "contact_enrichment_sigma_report"
+    "TAG_SALES_NAVIGATOR" : "sales_navigator"
+    "TAG_SN_REPORTING" : "sn_reporting"
+    "TAG_MARKETO_S3_COPY" : "marketo_s3_copy"
+    "TAG_S3LOAD_MARKETO_INTRADAY" : "s3load_marketo_intraday"
+    "TAG_EXTTBL_MARKETO_INTRADAY": "exttbl_marketo_intraday"
+    "TAG_S3LOAD_ADOBE": "s3load_adobe"
+    "TAG_S3LOAD_MARKETO_INTRADAY": "s3load_marketo_intraday"
+    "TAG_DS_MARKETO_INTRADAY": "mpm_ds_marketo_intraday"
+    "TAG_GLOI" : "tag_gloi"
+    "TAG_FF_CAMPAIGN_REPORTING_STAR_SCHEMA": "ff_campaign_reporting_star_schema"
+    "TAG_E2O" : "tag_e2o"
+    "TAG_MARKETO_S3_COPY": "marketo_s3_copy"
+    "TAG_AIQ_EXPORT" : 'tag_aiqexport'
+
+
+    #Matillion Migration GETPARAGON-348
+    "TAG_P4_METRICS": "p4_metrics"
+    "TAG_MI_CIB": "mi_cib"
+    "TAG_MDP_INGESTION_TRG": "mdp_ingestion_trg"
+    "TAG_MI_BIM360": "mi_bim360"
+
+    #Matillion Migration GETPARAGON-467
+    "TAG_CONVERSION_METRICS_SCHEDULE": "conversion_metrics_schedule"
+    "TAG_CONTENT_POC_SUMMARY_REFRESH": "content_poc_summary_refresh"
+
+    #Matillion Migration GETPARAGON-557
+    "TAG_FACT_DA_COURSE_DATA_CREATION": "fact_da_course_data_creation"
+    "TAG_NON_BIM_360_CSP_CUSTOMERS_V1": "non_bim_360_csp_customers_v1"
+    "TAG_SEISMIC_REPORTING_PROD_UPDATE": "seismic_reporting_prod_update"
+
+  
+    "TAG_LUMOS" : "tag_lumos"
+    "TAG_S3_SYNC_SFDC" : "s3_sync_sfdc"
+    "TAG_S3_SYNC_PARTITION" : "s3_sync_partition"
+    "TAG_S3_SYNC_4" : "s3_sync_4"
+    "TAG_S3_ADP_GLUE_LOAD1" : "s3_adp_glue_load1"
+    "TAG_S3_SYNC_3" : "s3_sync_3"
+    "TAG_S3_SYNC_2" : "s3_sync_2"
+    "TAG_S3_SYNC_1" : "s3_sync_1"
+    "TAG_TELEVENDOR_REPORT_LEAD_CAMPAIGN" : "televendor_report_lead_campaign"
+    "TAG_S3_TO_SNOWFLAKE_HGINSIGHT_ADSK_DATA_MODEL" : "s3_to_snowflake_hginsight_adsk_data_model"
+
+    "TAG_LUMOS": "tag_lumos"
+
+    #CJO_OCP
+    "TAG_CJO_OCP": "cjo_ocp"
+    "TAG_DCM" : "tag_dcm_reports"
+    "TAG_ACCOUNT_METADATA_UPDATE" : "account_metadata_update"
+    "TAG_ADP_REGIONAL_PORTFOLIO" : "adp_regional_portfolio"
+    "TAG_ALLOCADIA_FULL_INGESTION" : "allocadia_full_ingestion"
+
+    # Matillion Migration GETPARAGON-349
+    "TAG_COMPETITIVE_INTELLIGENCE_REPORTING": "competitive_intelligence_reporting"
+    "TAG_TRIALS_LOOKUP": "trials_lookup"
+    "TAG_PERSONA_PBI_OMNI": "persona_pbi_omni"
+    "TAG_MKTG_T_ACTIVITIES": "mktg_t_activities"
+
+    "TAG_6SENSE_ADHOC_ORCHESTRATION" : "6sense_adhoc_orchestration"
+    "TAG_CSO_MARKETO_CAMPAIGN": 'cso_marketo_campaign'
+    "TAG_URLGEN_ALID_SYNC": "urlgen_alid_sync"
+    "TAG_SPEND_EDH": "spend_edh"
+    "TAG_PRODUCT_LOOKUP_UPDATION": "product_lookup_updation"
+    "TAG_MDF_VCP_CCI" : "mdf_vcp_cci"
+
+    "TAG_ACTIVITY_MARKETO_V2_DRIVER" : "activity_marketo_v2_driver"
+
+    "TAG_AA_EVAR_ALLOCADIA_FILE" : "aa_evar_allocadia_file"
+    # Sprout_ingestion_tags
+    "TAG_SPROUT_API_INGESTION" : "sprout_api_ingestion"
+    "TAG_SPROUT_FACT_INGESTION" : "sprout_fact_ingestion"
+    "TAG_SPROUT_CUSTOMER_API_INGESTION" : "sprout_customer_api_ingestion"
+    "TAG_SPROUT_CUSTOMER_POST_INGESTION" : "sprout_customer_post_ingestion"
+    "TAG_SPROUT_CUSTOMER_PROFILE_INGESTION" : "sprout_customer_profile_ingestion"
+    #mdp_i360_new
+    "TAG_MDP_I360_NEW" : "mdp_i360_new"
+    "TAG_MDP_I360_NEW_SFTP_DATA_INTEGRATION" : "mdp_i360_new_sftp_data_integration"
+    "TAG_MDP_I360_NEW_RENAME_COLS": "mdp_i360_new_rename_cols"
+    "TAG_MDP_I360_NEW_FILTER_MULTIPLES": "mdp_i360_new_filter_multiples"
+    "TAG_MDP_I360_NEW_EXPORT_FOR_PBI_STG": "mdp_i360_new_export_for_pbi_stg"
+    "TAG_MDP_I360_NEW_LEGACY_QV_DATA": "mdp_i360_new_legacy_qv_data"
+    "TAG_MDP_I360_NEW_LEGACY_QV_DATA_AND_E2OPEN": "mdp_i360_new_legacy_qv_data_and_e2open"
+    "TAG_MDP_I360_NEW_EXPORT_WITH_LEGACY_E2": "mdp_i360_new_export_with_legacy_e2"
+    "TAG_MDP_I360_NEW_EXPORT_FOR_PBI": "mdp_i360_new_export_for_pbi"
+
+
+    # Matillion Migration GETPARAGON-468
+    "TAG_BIDTELLECT": "bidtellect"
+    "TAG_YDN_INTEGRATION": "ydn_integration"
+    "TAG_SIXSENSE_ADHOC_REPORT": "sixsense_adhoc_report"
+
+    # Matillion Migration GETPARAGON-537
+    "TAG_ADP_PORTFOLIO": "adp_portfolio"
+    "TAG_GENUINE_SIXSENSE_ACCOUNTS": "genuine_sixsense_accounts"
+
+    "TAG_CAMPAIGN_ALLOCATION": "campaign_allocation"
+
+    # Matillion Migration GETPARAGON-952
+    "TAG_NBE_QUOTESMC_REFRESH": "nbe_quotesmc_refresh"
+
+    # Matillion Migration GETPARAGON-607
+    "TAG_GLOBAL_LEAD_REPORT_V1": "global_lead_report_v1"
+    "TAG_LEAD_MARKETO": "tag_lead_marketo"
+    "TAG_ACTIVITY_MARKETO_INTRDAY": "activity_marketo_intraday"
+    "run_type": "daily_load"
+
+    "TAG_SIXSENSE": "sixsense"
+
+    "TAG_ADP_REGIONAL_PORTFOLIO": "adp_regional_portfolio"
+    "TAG_FACT_MC_EBA_SCORING" : "eba_engagement_scoring"
+    #enquiry to
+    "TAG_E2O" : 'tag_e2o'
+
+    "TAG_AIQ_EXPORT" : 'tag_aiqexport'
+
+    # airflow to astro migration
+    "TAG_EXTTBL_ADOBE": "exttbl_adobe"
+
+    "TAG_DS_ADOBE": "mpm_ds_adobe"
+    "TAG_DS_MARKETO_INTRADAY": "mpm_ds_marketo_intraday"
+    "TAG_EXTTBL_MARKETO_INTRADAY": "exttbl_marketo_intraday"
+    "TAG_FF_CAMPAIGN_REPORTING_STAR_SCHEMA": "ff_campaign_reporting_star_schema"
+    "TAG_GLOI" : "tag_gloi"
+    "TAG_MARKETO_S3_COPY": "marketo_s3_copy"
+    "TAG_S3LOAD_ADOBE": "s3load_adobe"
+    "TAG_S3LOAD_MARKETO_INTRADAY": "s3load_marketo_intraday"
+
+    "TAG_AIQ_EXPORT" : 'tag_aiqexport'
+    "TAG_FF_CAMPAIGN_REPORTING_STAR_SCHEMA": "ff_campaign_reporting_star_schema"
+    "TAG_GLOI" : "tag_gloi"
+    "TAG_DS_ADOBE": "mpm_ds_adobe"
+    "TAG_S3LOAD_ADOBE": "s3load_adobe"
+    "TRIALS_MAP_PRODUCT_FEATURE_CODES": "ADP_WORKSPACES.DEC_ANALYTICS_SHARED.TRIALS_MAP_PRODUCT_FEATURE_CODES"
+
+
+    # Models
+    "MODEL_CONVERSION_STACK": "CONVERSION_STACK"
+    "MODEL_ENGAGEMENT_STACK": "ENGAGEMENT_STACK"
+
+    # Datasource ids
+    "DSID_EVT_ADOBE": 1
+    "DSID_EVT_MARKETO": 2
+    "DSID_EVT_TELEVENDOR": 3
+    "DSID_EVT_IMPRESSION": 4
+    "DSID_EVT_AAS": 5
+    "DSID_CONV_ADOBE": 1
+    "DSID_CONV_SFDC_OPPORTUNITY": 2
+    "DSID_CONV_SFDC_LEADS": 3
+
+    # Model level declared variables
+    "PRODUCT_DIM": "RAW.LOOKUPS.MPM_PRODUCT_LOOKUP"
+    "RAW.ADP.SFDC_ANALYTICS_CMT_RAW": "RAW.ADP.SFDC_ANALYTICS_CMT_RAW"
+    "MODEL_SFDC_OPPORTUNITY_OPTIMIZED": "SFDC_OPPORTUNITY_OPTIMIZED"
+    "ADP_PUBLISH.ACCOUNT_OPTIMIZED.TRANSACTIONAL_CSN_MAPPING_OPTIMIZED": "ADP_PUBLISH.ACCOUNT_OPTIMIZED.TRANSACTIONAL_CSN_MAPPING_OPTIMIZED"
+    "ADP_PUBLISH.ACCOUNT_OPTIMIZED.CONTACT_MAPPING_MASTER": "ADP_PUBLISH.ACCOUNT_OPTIMIZED.CONTACT_MAPPING_MASTER"
+    "ADP_PUBLISH.ACCOUNT_OPTIMIZED.MAP_O2_EIDMID_CSN_OPTIMIZED": "ADP_PUBLISH.ACCOUNT_OPTIMIZED.MAP_O2_EIDMID_CSN_OPTIMIZED_DELETE"
+    "ADP_PUBLISH.ACCOUNT_OPTIMIZED.CONTACT_MASTER": "ADP_PUBLISH.ACCOUNT_OPTIMIZED.CONTACT_MASTER"
+    # Test cases
+    "test_case_start_date": "CASE WHEN LOWER('{{ var('historic_refresh') }}') = 'true' THEN TO_DATE('{{ var('START_DATE') }}', 'YYYYMMDD')
+                                ELSE (SELECT FROM_DATE FROM {{ ref('GET_DIGITAL_EXECUTION_DATE_RANGES') }} WHERE SOURCE = 'FACEBOOK') END"
+    "test_case_end_date": "CASE WHEN LOWER('{{ var('historic_refresh') }}') = 'true' THEN TO_DATE('{{ var('END_DATE') }}', 'YYYYMMDD')
+                                ELSE (SELECT TO_DATE FROM {{ ref('GET_DIGITAL_EXECUTION_DATE_RANGES') }} WHERE SOURCE = 'DISPLAY') END"
+
+    "full_refresh" : false
+
+data_tests:
+  +store_failures: true
+  +store_failures_as: view
+  +database: DEV
+  # +severity: warn
+
+on-run-end:
+  - "{{ store_test_results() }}"
+
+seeds:
+  marketing:
+    lookups: #Applies to all files under seeds/lookups/
+      +database: RAW
+      +schema: LOOKUPS
+    digital_services: #Applies to all files under seeds/digital_services/
+      #List of Ad Accounts in scope for Digital Services
+      +database: RAW
+      +schema: DIGITAL_SERVICES

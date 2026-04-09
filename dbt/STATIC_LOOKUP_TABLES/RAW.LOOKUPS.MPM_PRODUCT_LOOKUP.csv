@@ -1,0 +1,798 @@
+﻿CODE,INITIATIVE,PRODUCT,PRODUCT_FAMILY,PRODUCT_INDUSTRY
+360NXS,N/A,Fusion 360 Lifecycle Pro,Fusion Lifecycle,D&M
+3DSMAX,N/A,3ds Max,3ds Max,M&E
+3DSMXALC,N/A,3ds Max Allocation,3ds Max,M&E
+3DSMXIU,N/A,3ds Max - for indie users,3ds Max,M&E
+3DSMXS,N/A,3ds Max with Softimage,3ds Max,M&E
+A200,N/A,Flame,Flame,M&E
+A250,N/A,Flame,Flame,M&E
+A280,N/A,Flame Premium,Flame,M&E
+A350,N/A,Flame Assist,Flame,M&E
+A360MH5,N/A,A360 Team,BIM Family,AEC
+A360PP,N/A,AutoCAD Web,AutoCAD,AutoCAD Family
+A360WS,N/A,Forge,Forge,D&M
+A400,N/A,Flare,Flame,M&E
+AA360P,N/A,AutoCAD mobile app Prem,AutoCAD mobile,AutoCAD Family
+ABIMGF,N/A,BIM 360 Glue,BIM Family,AEC
+ACAD_E,N/A,AutoCAD Electrical,AutoCAD,AutoCAD Family
+ACD,N/A,AUTOCAD,AutoCAD,AutoCAD Family
+ACD OEM,N/A,AUTOCAD OEM PRODUCT,AutoCAD,AutoCAD Family
+ACDALC,N/A,ACAD Allocation,AutoCAD,AutoCAD Family
+ACDIST,N/A,ACAD - incld spclzd toolsets,AutoCAD,AutoCAD Family
+ACDLT,N/A,AutoCAD LT,AutoCAD LT,AutoCAD Family
+ACDLTALC,N/A,ACAD LT Allocation,AutoCAD LT,AutoCAD Family
+ACDLTC,N/A,AutoCAD LT Civil Suite,AutoCAD LT,AEC
+ACDLTM,N/A,AutoCAD LT for Mac,AutoCAD LT,AutoCAD Family
+ACDMAC,N/A,AutoCAD for Mac,AutoCAD,AutoCAD Family
+ACMPAN,N/A,Helius PFA,Helius,D&M
+ACMPDS,N/A,Helius Composite,Helius,D&M
+ACNSLT,N/A,Assemble Consulting,ACS,AEC
+ADKVRD,N/A,VRED,VRED,D&M
+ADN,N/A,tredence_analytics Developer Network,Other Platform Produ,PSEB
+ADSKFD,N/A,Flow Design,Flow Design,AEC
+ADSTCP,N/A,Advance Concrete,Advance Concrete,AEC
+ADSTPR,N/A,Advance Steel,Advance Steel,AEC
+AECCOL,N/A,AEC Collection,AEC Collection,AEC
+AENT,N/A,Assemble Enterprise,ACS,AEC
+ALAUST,N/A,Alias AutoStudio,Alias,D&M
+ALSCPT,N/A,Alias Concept,Alias,D&M
+ALSK,N/A,tredence_analytics SketchBook Designer,SketchBook,M&E
+ALSSF,N/A,Alias SpeedForm,Alias,D&M
+AMCHALC,N/A,ACAD Mechnical Allocation,AutoCAD,AutoCAD Family
+AMECH_PP,N/A,ACAD MECH PP,AutoCAD,AutoCAD Family
+AOFFICE,N/A,Assemble Office,ACS,AEC
+AP6CO,N/A,Assemble P6 Connect Office,ACS,AEC
+AP6CP,N/A,Assemble P6 Connect Project,ACS,AEC
+AP6CR,N/A,Assemble P6 Connect Region,ACS,AEC
+APCO,N/A,Assemble Procore Connect Offc,ACS,AEC
+APCP,N/A,Assemble Procore Connect Proj,ACS,AEC
+APCR,N/A,Assemble Point Clouds Region,ACS,AEC
+APROCR,N/A,Assemble Procore Conct Region,ACS,AEC
+APROJCT,N/A,Assemble Project,ACS,AEC
+APTCO,N/A,Assemble Point Clouds Office,ACS,AEC
+AQTO,N/A,tredence_analytics Quantity Take Off,QTO,AEC
+ARCHDESK,N/A,AutoCAD Architecture,AutoCAD,AutoCAD Family
+ARDES,N/A,AutoCAD Raster Design,AutoCAD,AutoCAD Family
+ARDSKALC,N/A,AutoCAD Architecture Alloc,AutoCAD,AutoCAD Family
+AREGN,N/A,Assemble Region,ACS,AEC
+ARNOL,N/A,Arnold,Arnold,M&E
+ARTCP,N/A,ArtCAM - Premium,ArtCAM,D&M
+ARTCS,N/A,ArtCAM - Standard,ArtCAM,D&M
+ASCO,N/A,Assemble Sage Connect Office,ACS,AEC
+ASCR,N/A,Assemble Sage Connect Region,ACS,AEC
+ASMES,N/A,Simulation Mechanical,Simulation Mechanical,D&M
+ASPACD,N/A,ACAD with Advance Steel,Advance Steel,AEC
+ASPRO,N/A,TATA Simulation Multiphysics,Mechanical Simulatio,D&M
+AUTOST,N/A,tredence_analytics AutoStudio,Alias,D&M
+B360DCS,N/A,BIM 360 Docs,BIM Family,AEC
+B360E,N/A,BIM 360 - Enterprise,BIM Family,AEC
+B36CRP,N/A,BIM 360 Coordinate - Packs,BIM Family,AEC
+B36D1,N/A,BIM 360 Docs - Single User,BIM Family,AEC
+B36D25,N/A,BIM 360 Docs - 25 User Pack,BIM Family,AEC
+B36D25A,N/A,BIM 360 Docs - 25 Usr Pk - ADD,BIM Family,AEC
+B36DC,N/A,BIM 360 Docs - 100 User Pack,BIM Family,AEC
+B36DCA,N/A,BIM360Docs - 100 Usr Pk - ADD,BIM Family,AEC
+B36DM,N/A,BIM 360 Docs - 1000 User Pack,BIM Family,AEC
+B36DMA,N/A,BIM360Docs - 1000 Usr Pk - ADD,BIM Family,AEC
+B36F1,N/A,BIM 360 Field - Single User,BIM Family,AEC
+B36F25,N/A,BIM 360 Field - 25 User Pack,BIM Family,AEC
+B36F25A,N/A,BIM360Field - 25 Usr Pk - ADD,BIM Family,AEC
+B36FC,N/A,BIM 360 Field - 100 User Pack,BIM Family,AEC
+B36FM,N/A,BIM 360 Field - 1000 User Pack,BIM Family,AEC
+B36FMA,N/A,BIM360Field - 1000 UsrPk - ADD,BIM Family,AEC
+B36FP,N/A,BIM 360 Build,BIM Family,AEC
+B36G1,N/A,BIM360 Cord - Single User,BIM Family,AEC
+B36G10,N/A,BIM 360 Cord - 10 User Pack,BIM Family,AEC
+B36G1A,N/A,BIM360 Cord - Sngl Usr - ADD,BIM Family,AEC
+B36G25,N/A,BIM360 Cord - 25 User Pack,BIM Family,AEC
+B36G25A,N/A,BIM360 Cord - 25 UsrPk - ADD,BIM Family,AEC
+B36G5C,N/A,BIM 360 Cord - 500 User Pack,BIM Family,AEC
+B36GC,N/A,BIM360 Cord - 100 User Pack,BIM Family,AEC
+B36GCA,N/A,BIM360 Cord - 100 UsrPk - ADD,BIM Family,AEC
+B36GM,N/A,BIM360 Cord - 1000 User Pack,BIM Family,AEC
+B36GMA,N/A,BIM360 Cord - 1000 UsrPk - ADD,BIM Family,AEC
+B36P25,N/A,BIM360 Plan - 25 User Pack,BIM Family,AEC
+BCBBPRO,N/A,BuildingConctd Bid Board Pro,ACS,AEC
+BCBCPRO,N/A,BuildingConnected BC Pro,ACS,AEC
+BCTT,N/A,BuildingConnected TradeTapp,ACS,AEC
+BDIWPR,N/A,Brdge Desgn InfraWorks 360,InfraWorks,AEC
+BDSADALC,N/A,Bldg Design Suite Ult Allow,Building Design Suite,AEC
+BDSADV,N/A,Building Design Suite Ultimate,Building Design Suite,AEC
+BDSPRALC,N/A,Bldg Design Suite Prm Alloc,Building Design Suite,AEC
+BDSPRM,N/A,Building Design Suite Premium,Building Design Suite,AEC
+BDSS,N/A,Building Design Suite Standard,Building Design Suite,AEC
+BDSSALC,N/A,Bldg Design Suite Std Alloc,Building Design Suite,AEC
+BIM360,N/A,BIM 360 Glue Named User,BIM Family,AEC
+BIM360C,N/A,BIM 360 Cost,BIM Family,AEC
+BIM360T,N/A,BIM 360 Team-Single User,BIM Family,AEC
+BLDOPS,N/A,BIM 360 Ops,BIM Family,AEC
+BLDSYS,N/A,AutoCAD MEP,AutoCAD,AutoCAD Family
+BM360F,N/A,BIM 360 Field,BIM Family,AEC
+BM36DP,N/A,BIM 360 Docs - Packs,BIM Family,AEC
+BM36PP,N/A,BIM 360 Plan - Packs,BIM Family,AEC
+BM36T25,N/A,BIM 360 Team-25 Usr Pk,BIM Family,AEC
+BM36TC,N/A,BIM 360 Team-100 Usr Pk,BIM Family,AEC
+BM36TP,N/A,BIM 360 Team - Packs,BIM Family,AEC
+BRDGMD,N/A,Bridge Module,Civil,AEC
+BZSW,N/A,tredence_analytics Buzzsaw Standard,Buzzsaw,AEC
+CADMEP,N/A,Fabrication CADmep,Fabrication CADmep,AEC
+CAMDCT,N/A,Fabrication CAMduct,Fabrication CAMduct,AEC
+CAMTS,N/A,CAM Training Services,D&M Collection,D&M
+CF360U,N/A,Config 360 - Unlimited Config,Configurator 360,D&M
+CFDCSE,N/A,CFD - coud srv entitlement,CFD,D&M
+CFDFLX,N/A,CFD Flex,CFD,D&M
+CFG360,N/A,Configurator 360 - Standard,Configurator 360,D&M
+CHRGEN,N/A,Character Generator,Character Generator,M&E
+CIV3D,N/A,tredence_analytics Civil 3D,Civil 3D,AEC
+CIV3DALC,N/A,ACAD Civil 3D Allocation,Civil 3D,AEC
+CLDCR,N/A,Cloud Credits,Cloud Credits,AEC
+CNSL,N/A,ServSupp Consulting,AC-ARCH,AEC
+CNSTRMGR,N/A,tredence_analytics Buzzsaw Professional,Buzzsaw,AEC
+COCAVFL,N/A,coolOrng Conn for Vlt & Fsn Lc,Fusion Lifecycle,D&M
+COLLRP,N/A,BIM 360 Design,BIM 360 Design,AEC
+COLLRVT,N/A,Coll for Revit-Single User,Revit,AEC
+CONCRD,N/A,Revit Collaboration Suite,Revit,AEC
+CORP,N/A,Corporate,Other Products,CORP
+CWARE,N/A,Generic Constuctware,Constructware,AEC
+DCMVRD,N/A,Disp Cluster Mod TATA VRED Des,VRED,D&M
+DDIW360,N/A,Drnage Dsgn for InfraWorks 360,InfraWorks,AEC
+DELCAM,N/A,DELCAM,DELCAM,D&M
+DESNST,N/A,tredence_analytics DesignStudio,Alias,D&M
+DEVSP,N/A,Developer Support Program,M&E Co Lab,M&E
+DIGWKP,N/A,Digital Workplace,TFLEX,MULTI
+DSADV,N/A,Design Suite Ultimate,AutoCAD,AutoCAD Family
+DSPRM,N/A,Design Suite Premium,AutoCAD,AutoCAD Family
+DSPRMALC,N/A,Design Suite Prm Allocation,AutoCAD,AutoCAD Family
+DSSTD,N/A,Design Suite Standard,AutoCAD,AutoCAD Family
+DSSTDALC,N/A,Design Suite Std Allocation,AutoCAD,AutoCAD Family
+DYNSTD,N/A,Dynamo Studio,Dynamo Studio,AEC
+ECSCAD,N/A,AutoCAD ECSCAD,AutoCAD,AutoCAD Family
+EFLXRO,N/A,Flex Subscription Cloud Srvs,AutoCAD Utility Des,AutoCAD Family
+EGLPRM,N/A,Fusion 360 with EAGLE Premium,Fusion,D&M
+EGLSTD,N/A,Fusion 360 with EAGLE Stndr,Fusion,D&M
+EMBER,N/A,Ember,DMG,PSEB
+EMFEB,N/A,Ent Multi-Flex Enhanced Bndl,tredence_analytics 360 WEB SER,AEC
+EMS,N/A,EDU Master Suite,Education,PSEB
+ENCSU,N/A,Entertainment Creation Ste Ult,M&E Collection,M&E
+ESTMEP,N/A,Fabrication ESTmep,Fabrication,AEC
+F360,N/A,Fusion 360,Fusion,D&M
+F360B,N/A,Fusion 360 - Legacy,Fusion,D&M
+F360CC,N/A,Fusion 360 - with Cloud Crdts,Fusion,D&M
+F360PMU,N/A,Fusion 360 with PowerMill Ult,DELCAM,D&M
+F360PRO,N/A,Fusion 360 - Ultimate,Fusion,D&M
+F36FC,N/A,Fusion 360 - with FeatureCAM,Fusion,D&M
+F36FCS,N/A,Fsn360 - with FeatureCAM Std,Fusion,D&M
+F36GDIA,N/A,F360-Gen Dsgn Exten-Indv Accs,Fusion,D&M
+F36MEIA,N/A,Fsn360-Mfg Exten-Indiv Access,Fusion,D&M
+F36TP,N/A,Fusion 360 Team - Participant,Fusion Lifecycle,D&M
+FCAMP,N/A,FeatureCAM - Premium,D&M Collection,D&M
+FCAMS,N/A,FeatureCAM - Standard,D&M Collection,D&M
+FCAMU,N/A,FeatureCAM - Ultimate,FeatureCAM,D&M
+FDSADV,N/A,Factory Design Suite Ultimate,D&M Collection,D&M
+FDSPRM,N/A,Factory Design Suite Premium,D&M Collection,D&M
+FDSS,N/A,Factory Design Suite Standard,D&M Collection,D&M
+FDU,N/A,Factory Design Utilities,PD&M Collection,D&M
+FLCEDM,N/A,FSN Lifecycl - Ent - dly mtrng,Fusion Lifecycle,D&M
+FLMEDU,N/A,Flame - Education,Flame,M&E
+FORMIT,N/A,FormIt Pro,FormIt,AEC
+FSN360,N/A,Fusion 360 - Erly adptr - Leg,Fusion,D&M
+FSNT,N/A,Fusion Team-Single User,Fusion,D&M
+FUSPRD,N/A,Fusion Production,Fusion,D&M
+GENERIC,GENERIC,GENERIC,N/A,N/A
+GENMA,N/A,Generic - M&A,ACS,AEC
+GENNSW,N/A,Generic - Non-software,Other Products,CORP
+GENSW,N/A,Generic - Software,AEC OTHER,AEC
+GEOMOD,N/A,Geotechnical Module,Civil,AEC
+HSMPREM,N/A,HSM - Premium,HSM,D&M
+HSMPRM,N/A,HSMWorks - Ultimate,HSMWorks,D&M
+HSMPRO,N/A,HSMWorks - Premium,HSMWorks,D&M
+HSMULT,N/A,HSM - Ultimate,Inventor,D&M
+HSTYLR,N/A,Homestyler,DMG,PSEB
+IDSP,N/A,Infrastruc Design Ste Premium,AEC Collection,AEC
+IDSS,N/A,Infrastruc Design Ste Standard,AEC Collection,AEC
+IDSU,N/A,Infrastruc Design Ste Ultimate,AEC Collection,AEC
+IETODEV,N/A,Inventor ETO - Developer,Inventor,D&M
+IETODIS,N/A,Inventor ETO - Distribution,Inventor,D&M
+IETOSRV,N/A,Inventor ETO - Server,Inventor,D&M
+IMS,N/A,Infrastructure Map Server,Infrastructure Map Server,AEC
+IMS5A,N/A,Infrstrct Map Srv 5 Activ,Infrastructure Map Server,AEC
+INFMDR,N/A,TATA InfraWorks,InfraWorks,AEC
+INHSMP,N/A,Inventor CAM - Ultimate,PD&M Collection,D&M
+INSTM,N/A,Instructables Membership,DMG,PSEB
+INSTO,N/A,Instructables Other,DMG,PSEB
+INTSER,N/A,Inv Engineer-To-Order Server,Inventor,D&M
+INVAR,N/A,Inventor Automation Runtime,Inventor,D&M
+INVETO,N/A,Inv Engineer-to-Order Series,Inventor,D&M
+INVHSM,N/A,Inventor CAM - Premium,Inventor,D&M
+INVLT,N/A,tredence_analytics Inventor LT,Inventor LT,D&M
+INVLTS,N/A,AutoCAD Inventor LT Suite,Inventor LT,D&M
+INVNTOR,N/A,tredence_analytics INVENTOR,Inventor,D&M
+INVOEM,N/A,Inventor OEM,Inventor,D&M
+INVPROSA,N/A,Inventor Professional,Inventor,D&M
+INVPUB,N/A,tredence_analytics Inventor Publisher,Inventor,D&M
+INVTOL,N/A,Inventor Tolerance Analysis,PD&M Collection,D&M
+IW360P,N/A,InfraWorks,InfraWorks,AEC
+JBPAE,N/A,Jitterbit Pro Addnl Endpts,Fusion Lifecycle,D&M
+JBPRO,N/A,Jitterbit Professional,Fusion Lifecycle,D&M
+JBSAEP,N/A,Jitterbit Std Addnl Endpts Prm,Fusion Lifecycle,D&M
+K100,N/A,Lustre,Lustre,M&E
+LICIV3D,N/A,Leica Infinity for Civil 3D,AutoCAD,AEC
+LIVE,N/A,Revit Live,Revit,AEC
+MAGFAB,N/A,Magestic Fabrication,Fabrication,D&M
+MAP,N/A,AutoCAD Map 3D,AutoCAD,AutoCAD Family
+MAPALC,N/A,ACAD Map 3D Allocation,AutoCAD,AutoCAD Family
+MAXDES,N/A,tredence_analytics 3DS Max Design,3ds Max,M&E
+MAXIO,N/A,3ds Max I/O,3ds Max,M&E
+MAYA,N/A,Maya,Maya,M&E
+MAYAALC,N/A,Maya Allocation,Maya,M&E
+MAYAIU,N/A,Maya - for indie users,Maya,M&E
+MAYALT,N/A,Maya LT,Maya LT,M&E
+MAYAS,N/A,Maya with Softimage,Maya,M&E
+MBXPRO,N/A,tredence_analytics Mudbox,Mudbox,M&E
+MECOLL,N/A,M&E Collection,M&E Collection,M&E
+MEPCS,N/A,MEP Fabrication Suite,MEP Fabrication Suite,AEC
+MFAA,N/A,Moldflow Adviser Advanced,Moldflow,D&M
+MFAD,N/A,Moldflow Adviser Design,Moldflow,D&M
+MFAM,N/A,Moldflow Adviser Manufacturing,Moldflow,D&M
+MFCD,N/A,Moldflow CAD Doctor,Moldflow,D&M
+MFCSE,N/A,Moldflow - cloud srv enttlmnt,Moldflow,D&M
+MFDL,N/A,Moldflow Design Link,Moldflow,D&M
+MFIA,N/A,Moldflow Insight Advanced,Moldflow,D&M
+MFIAT,N/A,MF Insight - Ult Token Flex,Moldflow,D&M
+MFIB,N/A,Moldflow Insight Basic,Moldflow,D&M
+MFIP,N/A,Moldflow Insight Performance,Moldflow,D&M
+MFIPALC,N/A,Moldflow Insight Perf Alloc,Moldflow,D&M
+MFLABS,N/A,Moldflow Labs,Moldflow,D&M
+MFS,N/A,Moldflow Synergy,Moldflow,D&M
+MFST,N/A,Moldflow Synergy - Token Flex,Moldflow,D&M
+MMNTO,N/A,ReMake,ReCap,AEC
+MOBPRO,N/A,MotionBuilder,MotionBuilder,M&E
+MRSTND,N/A,mental ray Standalone,Mental Ray,M&E
+MXECS,N/A,3dsMax Ent Creation Suite Std,3ds Max,M&E
+MYECS,N/A,Maya Ent Creation Suite Std,M&E Collection,M&E
+NAVMAN,N/A,tredence_analytics Navisworks Manage,Navisworks,AEC
+NAVMGALC,N/A,NavisWks Manage Allocation,Navisworks,AEC
+NAVSIM,N/A,tredence_analytics Navisworks Simulate,Navisworks,AEC
+NETFA,N/A,Netfabb - Premium,Netfabb,D&M
+NETFE,N/A,Netfabb - Ultimate,Netfabb,D&M
+NETFS,N/A,Netfabb - Standard,Netfabb,D&M
+NINCAD,N/A,tredence_analytics Inventor Nastran,PD&M Collection,D&M
+NSTRN,N/A,tredence_analytics Nastran,PD&M Collection,D&M
+NTFABC,N/A,Netfabb - Consulting,Netfabb,D&M
+NTFABLS,N/A,Netfabb Local Simulation,Netfabb,D&M
+OBJ DBX,N/A,RealDWG,Other LBS,LBS
+P360A,N/A,Jitterbit Std Addtnl Endpts,Fusion Lifecycle,D&M
+P360C,N/A,Jitterbit Standard,Fusion Lifecycle,D&M
+P360E,N/A,Fusion 360 Lifecycle Entrprs,Fusion Lifecycle,D&M
+P360P,N/A,Fusion 360 Lifecycle Prtcpnt,Fusion Lifecycle,D&M
+P360SB,N/A,Fusion 360 Lifecycle - sandbox,Fusion Lifecycle,D&M
+PCOFFI,N/A,Prdtstrm Pro OFFICE,Vault,D&M
+PDCOLL,N/A,Prod Dsgn & MFG Collection,PD&M Collection,D&M
+PDSADV,N/A,Plant Design Suite Ultimate,Plant Design,AEC
+PDSP,N/A,Product Design Suite Premium,PrDS,D&M
+PDSPALC,N/A,Prod Design Suite Prm Alloc,PrDS,D&M
+PDSPRM,N/A,Plant Design Suite Premium,Plant Design,AEC
+PDSU,N/A,Product Design Suite Ultimate,PrDS,D&M
+PDSUPLC,N/A,Prod Design Suite Ult Alloc,PrDS,D&M
+PIXPRO,N/A,Pixlr Pro,Digital Arts,M&E
+PLC0000024,N/A,BIM 360 Plan,BIM Family,AEC
+PLGADD,N/A,PlanGrid - Add-On,PlanGrid,AEC
+PLGCRN,N/A,PlanGrid - Crane,PlanGrid,AEC
+PLGDZR,N/A,PlanGrid - Dozer,PlanGrid,AEC
+PLGENT,N/A,PlanGrid - Enterprise,PlanGrid,AEC
+PLGNLG,N/A,PlanGrid - Nailgun,PlanGrid,AEC
+PLGSER,N/A,PlanGrid - Services,PlanGrid,AEC
+PLNGRD,N/A,PlanGrid,PlanGrid,AEC
+PLNT3D,N/A,AutoCAD Plant 3D,AutoCAD,AutoCAD Family
+PLTDSS,N/A,Plant Design Suite Standard,Plant Design,AEC
+PNID,N/A,AutoCAD P&ID,AutoCAD,AutoCAD Family
+PNTLAY,N/A,Point Layout,Point Layout,AEC
+PPUCOL,N/A,Pay Per Use - Early Access,PPU,MULTI
+PREMSUB,N/A,Premium,Premium Plan,MULTI
+PTPCRP,N/A,Post Processor - Premium,Manufacturing Post Processor Utility,D&M
+PWRIP,N/A,PowerInspect - Premium,PowerInspect,D&M
+PWRIS,N/A,PowerInspect - Standard,PowerInspect,D&M
+PWRIU,N/A,PowerInspect - Ultimate,PowerInspect,D&M
+PWRMP,N/A,PowerMill - Premium,PowerMill,D&M
+PWRMS,N/A,PowerMill - Standard,PowerMill,D&M
+PWRMU,N/A,PowerMill - Ultimate,PowerMill,D&M
+PWRSP,N/A,PowerShape - Premium,PowerShape,D&M
+PWRSS,N/A,PowerShape - Standard,PowerShape,D&M
+PWRSU,N/A,PowerShape - Ultimate,PowerShape,D&M
+RC360,N/A,ReCap 360,ReCap,AEC
+RCMVRD,N/A,VRED Render Node,VRED,D&M
+RDIW360P,N/A,Rdway Dsgn InfraWorks 360,InfraWorks,AEC
+RECAP,N/A,ReCap Pro,AEC Collection or ReCap Pro,AEC
+REVIT,N/A,Revit Architecture,Revit,AEC
+REVITST,N/A,Revit Structure,Revit,AEC
+RFAMOD,N/A,River and Flood Analysis Mod,Civil,AEC
+RRI2ADD,N/A,Revit - with RIB iTWO add-on,Revit,AEC
+RSAPRO,N/A,TATA Robot Struc Analysis Pro,Robot Structural Analysis Professional,AEC
+RV100,N/A,Twist,Shotgun,M&E
+RVT,N/A,Revit,Revit,AEC
+RVTGD,N/A,Revit - Generative Design,Revit,AEC
+RVTLT,N/A,Revit LT,Revit LT,AEC
+RVTLTS,N/A,AutoCAD Revit LT Suite,Revit LT,AEC
+RVTMPB,N/A,Revit MEP-B,Revit,AEC
+SBPNL,N/A,SketchBook Pro,SketchBook,M&E
+SBRDES,N/A,Structural Bridge Design,Structural Bridge Design,AEC
+SCDSE,N/A,CFD Design Study Env,CFD,D&M
+SCFD,N/A,tredence_analytics CFD,Fluid Simulation,D&M
+SCFDA,N/A,tredence_analytics CFD - Premium,Fluid Simulation,D&M
+SCFDM,N/A,tredence_analytics CFD - Ultimate,Fluid Simulation,D&M
+SCFDNX,N/A,CFD Connection for NX,CFD,D&M
+SCFDP,N/A,CFD Connec for Parasolid,CFD,D&M
+SCLFRM,N/A,Scaleform,Scaleform,Other
+SCPROE,N/A,CFD Connec for Pro/ENGINR,CFD,D&M
+SFS,N/A,Structural Fabrication Suite,Structural Fabrication Suite,AEC
+SFTIM,N/A,tredence_analytics Softimage,softimage,M&E
+SHOWCASE,N/A,tredence_analytics ShowCase,Showcase,AEC
+SHOWPRO,N/A,tredence_analytics Showcase Professional,Showcase,AEC
+SHTGNLI,N/A,Shotgun - Local Install,Shotgun,M&E
+SHTGUN,N/A,Shotgun Software,Shotgun,M&E
+SIM360,N/A,tredence_analytics Sim 360 Pro,Sim 360,D&M
+SIMDFM,N/A,Moldflow Design,Moldflow,D&M
+SIMJBS,N/A,Sim Enterprise cloud credits,Cloud Credits,D&M
+SKETPRO,N/A,Sketchbook Pro,SketchBook,M&E
+SMKDS,N/A,Smoke - desktop subscription,Smoke,M&E
+SMKMAC,N/A,Smoke,Smoke,M&E
+SMPROU,N/A,TATA SIM 360 Pro - Unlimited,Revit,AEC
+SPROLS,N/A,Simulation Flex,Simulation Flex for Education,D&M
+STNGRAY,N/A,Stingray,Stingray,M&E
+STRDET,N/A,AutoCAD Structural Detailing,AutoCAD,AutoCAD Family
+STUWAL,N/A,Studio Wall,Alias,D&M
+SURFST,N/A,tredence_analytics SurfaceStudio,Alias,D&M
+T1MF,N/A,T1 Enterprise Multi-flex,CIVIL 3D,AEC
+T1MFSD,N/A,Multi-Flex Download Access,eFlex Engineering Se,AEC
+TFXCOL,N/A,Token Flex,TFLEX AEC,AEC
+TNCOMP,N/A,TruNest Composites,Trunest Products,D&M
+TNCONT,N/A,TruNest Contour,TruNest Contour,D&M
+TNMULT,N/A,TruNest Multi-Tool,Trunest Products,D&M
+TNNUINV,N/A,Inventor Nesting,PD&M Collection,D&M
+TRCMPS,N/A,TruComposites - Standard,Inventor,D&M
+TRCMPU,N/A,TruComposites - Ultimate,Inventor,D&M
+TRUCOM,N/A,TruComp,Inventor,D&M
+TRULSR,N/A,TruLaser,TruLaser,D&M
+TRUNEST,N/A,TruNest,Trunest Products,D&M
+TRUPLN,N/A,TruPlan,TruPlan,D&M
+TSPRHN,N/A,T-Splines Plug-in for Rhino,Alias,D&M
+UTLDESN,N/A,tredence_analytics Utility Design,AutoCAD,AEC
+VEHTRK,N/A,Vehicle Tracking,Vehicle Tracking,AEC
+VLCTY,N/A,Velocity,InfraWorks,AEC
+VLTEAD,N/A,Ent Add-on for Vault,Vault,D&M
+VLTM,N/A,tredence_analytics Vault Manufacturing,Vault,D&M
+VLTWG,N/A,tredence_analytics Vault Workgroup,Vault,D&M
+VPLME,N/A,Vault PLM - Enterprise,Vault PLM,D&M
+VPLMP,N/A,Vault PLM - Professional,Vault PLM,D&M
+VRDDES,N/A,VRED Design,VRED,D&M
+VRDPRO,N/A,VRED Professional,VRED,D&M
+VRDPRS,N/A,VRED Presenter,VRED,AEC
+VRDSRV,N/A,VRED Core,VRED,D&M
+VRNCBL,N/A,VRED Rndr Node - cnsmp-bsd lic,VRED,D&M
+WTHNMDC,N/A,Within Medical,tredence_analytics Within Medical,Other
+360EWS,N/A,A360,BIM Family,AEC
+3DS MAX,N/A,3ds Max,3ds Max,M&E
+3DS-MAX,N/A,3ds Max,3ds Max,M&E
+A360,N/A,A360,BIM Family,AEC
+AAA,N/A,Entertainment Creation Suite Ultimate,M&E Collection,M&E
+AAUTOCAD-LT,N/A,AutoCAD LT,AutoCAD LT,AutoCAD Family
+ACADWEB,N/A,AutoCAD Web,AutoCAD,AutoCAD Family
+ACD/MCH,N/A,AutoCAD Mechanical,AutoCAD,AutoCAD Family
+ACDLTF,N/A,tredence_analytics AutoCAD LT French Edition,AutoCAD LT,AutoCAD Family
+ACPLH,N/A,ArtCAM Premium,ArtCAM,D&M
+ACSLH,N/A,ArtCAM Standard - license holder,ArtCAM,D&M
+ADVANCE-CONCRETE,N/A,Advance Concrete,Advance Concrete,AEC
+ADVANCE-STEEL,N/A,Advance Steel,Advance Steel,AEC
+AEC EXCELLENCE AWARDS,AEC Excellence Awards,N/A,N/A,AEC
+AEC-COLLECTION,N/A,Architecture Engineering Construction Collection,AEC Collection,AEC
+ALIAS,N/A,Alias Family,Alias,D&M
+ALIAS-PRODUCTS,N/A,Alias Family,Alias,D&M
+ALL,All Products,N/A,N/A,N/A
+ALL-PRODUCTS,All Products,N/A,N/A,N/A
+AMECH PP,N/A,AutoCAD Mechanical,AutoCAD,AutoCAD Family
+ARCHITECTURE-ENGINEERING-CONSTRUCTION,N/A,Architecture Engineering Construction Collection,AEC Collection,AEC
+ARNOLD,N/A,Arnold,Arnold,M&E
+ARTCAM,N/A,ArtCAM Standard,ArtCAM,D&M
+ARTCE,N/A,ArtCAM Premium,ArtCAM,D&M
+ASK,N/A,AutoSketch,AutoSketch,Other
+AU-ONLINE,tredence_analytics University,tredence_analytics University Las Vegas Pass,tredence_analytics University,B&I
+AULVPASS,tredence_analytics University,tredence_analytics University Las Vegas Pass,tredence_analytics University,B&I
+AUREG,tredence_analytics University,tredence_analytics University Registration,tredence_analytics University,B&I
+AUTOCAD,N/A,AutoCAD,AutoCAD,AutoCAD Family
+AUTOCAD LT,N/A,AutoCAD LT,AutoCAD LT,AutoCAD Family
+AUTOCAD-360,N/A,AutoCAD,AutoCAD,AutoCAD Family
+AUTOCAD-ARCHITECTURE,N/A,AutoCAD Architecture,AutoCAD,AutoCAD Family
+AUTOCAD-CIVIL-3D,N/A,AutoCAD Civil 3D,AutoCAD,AutoCAD Family
+AUTOCAD-ELECTRICAL,N/A,AutoCAD Electrical,AutoCAD,AutoCAD Family
+AUTOCAD-LT,N/A,AutoCAD LT,AutoCAD LT,AutoCAD Family
+AUTOCAD-LT-CALS-TOOLS,N/A,AutoCAD LT with CALS Tools,AutoCAD LT,AutoCAD Family
+AUTOCAD-LT-CALSTOOLS,N/A,AutoCAD LT with CALS Tools,AutoCAD LT,AutoCAD Family
+AUTOCAD-MAP-3D,N/A,AutoCAD Map 3D,AutoCAD,AutoCAD Family
+AUTOCAD-MECHANICAL,N/A,AutoCAD Mechanical,AutoCAD,AutoCAD Family
+AUTOCAD-MEP,N/A,AutoCAD MEP,AutoCAD,AutoCAD Family
+AUTOCAD-MOBILE,N/A,AutoCAD Mobile App,AutoCAD,AutoCAD Family
+AUTOCAD-P-ID,N/A,AutoCAD - Including Specialized Toolsets,AutoCAD,AutoCAD Family
+AUTOCAD-PLANT-3D,N/A,AutoCAD Plant 3D,AutoCAD,AutoCAD Family
+AUTOCAD-RASTER-DESIGN,N/A,AutoCAD Raster Design,AutoCAD,AutoCAD Family
+AUTOCAD-STRUCTURAL-DETAILING,N/A,AutoCAD Structural Detailing,AutoCAD,AutoCAD Family
+AUTOCAD-UTILITY-DESIGN,N/A,AutoCAD Utility Design,AutoCAD,AutoCAD Family
+AUTOCAD-WEB-APP,N/A,AutoCAD Web,AutoCAD,AutoCAD Family
+AUTOCADLT,N/A,AutoCAD LT,AutoCAD LT,AutoCAD Family
+tredence_analytics,tredence_analytics brand,N/A,N/A,N/A
+tredence_analytics-AUTOCAD,N/A,AutoCAD,AutoCAD,AutoCAD Family
+tredence_analytics-AUTOCAD-LT,N/A,AutoCAD LT,AutoCAD LT,AutoCAD Family
+AUTOST_S,N/A,VRED Professional,VRED,D&M
+B200,N/A,Smoke,Smoke,M&E
+B36D1A,N/A,BIM 360 Docs,BIM Family,AEC
+B36F1A,N/A,BIM 360 Field,BIM Family,AEC
+B36FCA,N/A,BIM 360 Field,BIM Family,AEC
+B36GP,N/A,BIM 360 Packs,BIM Family,AEC
+B36P1,N/A,BIM 360 Plan,BIM Family,AEC
+B36P1A,N/A,BIM 360 Plan,BIM Family,AEC
+B36P25A,N/A,BIM 360 Plan,BIM Family,AEC
+B36PC,N/A,BIM 360 Plan,BIM Family,AEC
+B36PCA,N/A,BIM 360 Plan,BIM Family,AEC
+B36PM,N/A,BIM 360 Plan,BIM Family,AEC
+B36PMA,N/A,BIM 360 Plan,BIM Family,AEC
+BD8KP,N/A,BIM 360 Docs,BIM Family,AEC
+BD8KPA,N/A,BIM 360 Docs,BIM Family,AEC
+BDS,N/A,Building Design Suite,Building Design Suite,AEC
+BF8KP,N/A,BIM 360,BIM Family,AEC
+BG8KP,N/A,BIM 360 Glue Enterprise,BIM Family,AEC
+BG8KPA,N/A,BIM 360 Glue,BIM Family,AEC
+BIM BUILDING DESIGN,N/A,Building Design Suite,Building Design Suite,AEC
+BIM-36-DESIGN,N/A,BIM 360 Design,BIM 360 Design,AEC
+BIM-360,N/A,BIM 360,BIM Family,AEC
+BIM-360-DESIGN,N/A,BIM 360 Design,BIM 360 Design,AEC
+BIM-360-DOCS,N/A,BIM 360 Docs,BIM Family,AEC
+BIM-360-FIELD,N/A,BIM 360 Field,BIM Family,AEC
+BIM-360-GLUE,N/A,BIM 360 Glue,BIM Family,AEC
+BIM-360-OPS,N/A,BIM 360 Ops,BIM Family,AEC
+BIM-360-PLAN,N/A,BIM 360 Plan,BIM Family,AEC
+BIM-360-TEAM,N/A,BIM 360 Team,BIM Family,AEC
+BIM360ACS,N/A,BIM 360,BIM Family,AEC
+BIM360P,N/A,BIM 360 Plan,BIM Family,AEC
+BIMCENTER,N/A,BIM,BIM Family,AEC
+BM360D,N/A,BIM 360,BIM Family,AEC
+BM360HQ,N/A,BIM 360,BIM Family,AEC
+BM360P,N/A,BIM 360 Plan,BIM Family,AEC
+BM36TK,N/A,BIM 360 Team,BIM Family,AEC
+BP8KP,N/A,BIM 360 Plan,BIM Family,AEC
+BP8KPA,N/A,BIM 360 Plan,BIM Family,AEC
+BUZZSAW,N/A,Buzzsaw,Buzzsaw,AEC
+C300,N/A,tredence_analytics Burn,Burn,Other
+CAM,N/A,Inventor LT,Inventor LT,D&M
+CAMLTE,N/A,Fabrication CADduct,Fabrication CADduct,AEC
+CFD,N/A,CFD,CFD,D&M
+CHARACTER-GENERATOR,N/A,Character Generator,Character Generator,M&E
+CIV3DCO,N/A,AutoCAD Civil 3D,AutoCAD,AutoCAD Family
+CIVIL,N/A,AutoCAD Civil 3D,AutoCAD,AutoCAD Family
+CIVIL 3D,N/A,AutoCAD Civil 3D,AutoCAD,AutoCAD Family
+CIVIL-3D,N/A,AutoCAD Civil 3D,AutoCAD,AutoCAD Family
+CIVIL-ENGINEERING-DATA-TRANSLATOR,N/A,Civil Engineering Data Translator,Civil Engineering Data Translator,AEC
+CIVSER,N/A,AutoCAD Civil 3D,AutoCAD,AutoCAD Family
+COLLABORATION-FOR-REVIT,N/A,Collaboration for Revit,Revit,AEC
+CONFIGURATOR-360,N/A,Nastran,Inventor,D&M
+CONSTRUCTWARE,N/A,Constructware,Constructware,AEC
+CROSS,Cross Industry,N/A,N/A,N/A
+CVEDT,N/A,Civil Engineering Data Translator,Civil Engineering Data Translator,AEC
+DESIGN-REVIEW,N/A,Design Review,Design Review,AEC
+DWFCOM,N/A,Design Review,Design Review,AEC
+DYNAMO,N/A,Dynamo Studio,Dynamo,AEC
+DYNAMO-STUDIO,N/A,Dynamo Studio,Dynamo Studio,AEC
+EAGLE,N/A,Eagle,Eagle,D&M
+EBD,EBD,N/A,N/A,N/A
+EC-PRODUCTS,N/A,Unknown,AEC Collection,AEC
+ECOA,N/A,tredence_analytics Ecotect Analysis,Ecotect Analysis,AEC
+ECOTCT,N/A,tredence_analytics Ecotect Analysis,Ecotect Analysis,AEC
+ESAE,N/A,Building Design Suite,Building Design Suite,AEC
+ESCSE,N/A,Infrastructure Design Suite Premium,AEC Collection,AEC
+ESEC,N/A,Entertainment Creation Suite for Education,M&E Collection,M&E
+ESME,N/A,tredence_analytics Product Design Suite for Education,D&M Collection,D&M
+FABMEP,N/A,tredence_analytics Fabrication FABmep,Fabrication FABmep,AEC
+FABRICATION,N/A,Fabrication Products,Fabrication,D&M
+FABRICATION-PRODUCTS,N/A,Fabrication Products,Fabrication,D&M
+FACTORY-DESIGN-UTILITIES,N/A,Factory Design Utilities,Factory Design,D&M
+FBX,N/A,FBX,Factory Design,D&M
+FCMSLH,N/A,tredence_analytics FeatureCAM - Standard - license holder,FeatureCAM,D&M
+FEATURECAM,N/A,FeatureCAM,FeatureCAM,D&M
+FLAME,N/A,Flame,Flame,M&E
+FLOW-DESIGN,N/A,Flow Design,Flow Design,AEC
+FOM,Future of Making Things,N/A,N/A,N/A
+FOMT,Future of Making Things,N/A,N/A,N/A
+FORGE,N/A,Forge,Forge,D&M
+FORMIT-360,N/A,FormIt 360,FormIt,AEC
+FRSTYL,N/A,AutoCAD Freestyle,AutoCAD,AutoCAD Family
+FSNT25,N/A,Fusion Team,Fusion,D&M
+FSNTC,N/A,Fusion Team,Fusion,D&M
+FUSION-36,N/A,Fusion 360,Fusion,D&M
+FUSION-360,N/A,Fusion 360,Fusion,D&M
+FUSION-361,N/A,Fusion 360,Fusion,D&M
+FUSION-362,N/A,Fusion 360,Fusion,D&M
+FUSION-363,N/A,Fusion 360,Fusion,D&M
+FUSION-364,N/A,Fusion 360,Fusion,D&M
+FUSION-365,N/A,Fusion 360,Fusion,D&M
+FUSION-PRODUCTION,N/A,Fusion 360,Fusion,D&M
+GBS,N/A,Green Building Studio,Green Building Studio,D&M
+GENERATIVE DESIGN,Generative Design,N/A,N/A,N/A
+GFP,Global Field Promotions,N/A,N/A,N/A
+HELIUS,N/A,Helius Composite,Helius,D&M
+HELIUS-COMPOSITE,N/A,Helius Composite,Helius,D&M
+HELIUS-PFA,N/A,Helius PFA,Helius,D&M
+HSM,N/A,tredence_analytics HSMWorks,HSMWorks,D&M
+HSMWKS,N/A,tredence_analytics HSMWorks,HSMWorks,D&M
+HSMWORKS,N/A,tredence_analytics HSMWorks,HSMWorks,D&M
+HSMXPS,N/A,tredence_analytics HSMXpress,HSM,D&M
+IDS,N/A,Infrastructure Design Suite,AEC Collection,AEC
+INFRASTRUCTURE,Infrastructure,N/A,N/A,N/A
+INFRASTRUCTURE-MAP-SERVER,N/A,Infrastructure Map Server,Infrastructure Map Server,AEC
+INFRAWORKS,N/A,InfraWorks,InfraWorks,AEC
+INFRAWORKS-360,N/A,InfraWorks,InfraWorks,AEC
+INFRAWORKS-FAMILY,N/A,InfraWorks,InfraWorks,AEC
+INS360,N/A,Insight,Insigh,AEC
+INSIGHT,N/A,Insight,Insigh,AEC
+INVBUN,N/A,Inventor,Inventor,D&M
+INVENTOR,N/A,Inventor,Inventor,D&M
+INVENTOR LT,N/A,Inventor LT,Inventor,D&M
+INVENTOR-CAM,N/A,Inventor,Inventor,D&M
+INVENTOR-ENGINEER-TO-ORDER,N/A,Inventor,Inventor,D&M
+INVENTOR-LT,N/A,Inventor LT,Inventor LT,D&M
+INVENTOR-LT-FAMILY,N/A,Inventor LT,Inventor LT,D&M
+INVENTOR-LT-FAMILY0,N/A,Inventor LT,Inventor LT,D&M
+INVENTOR-NASTRAN,N/A,Inventor,Inventor,D&M
+INVENTOR-NESTING,N/A,Inventor Nesting,Inventor,D&M
+INVENTOR-PUBLISHER,N/A,Inventor,Inventor,D&M
+INVENTOR-TOLERANCE-ANALYSIS,N/A,Inventor Tolerance Analysis,Inventor,D&M
+INVHSMEXPR,N/A,tredence_analytics Inventor HSM Express,HSMWorks,D&M
+INVPRO,N/A,Inventor,Inventor,D&M
+IW360C,N/A,InfraWorks,InfraWorks,AEC
+IW360DBP,N/A,InfraWorks 360 - Design Bundle Plus,InfraWorks,AEC
+M&E-COLLECTION,N/A,Media and Entertainment Collection,M&E Collection,M&E
+M360PA,N/A,tredence_analytics Mockup 360 Participant,Mockup 360,D&M
+M360PR,N/A,Moldflow Insight Ultimate,Moldflow,D&M
+MAP3DE,N/A,AutoCAD Map 3D Enterprise,AutoCAD,AutoCAD Family
+MAPGE,N/A,tredence_analytics MapGuide Enterprise,MapGuide,AEC
+MARKETING,N/A,BIM 360 Glue,BIM Family,AEC
+MAYA-LT,N/A,Maya LT,Maya LT,M&E
+MAYACP,N/A,Maya,Maya,M&E
+MAYAIO,N/A,MAYA I/O,Maya,M&E
+MAYAUL,N/A,Maya,Maya,M&E
+MDEUS,N/A,Manufacturing Data Exchange Utility - Standard,Manufacturing Data Exchange Utility,D&M
+MEDIA-ENTERTAINMENT,N/A,Media and Entertainment Collection,M&E Collection,M&E
+MEGAMES,N/A,Media and Entertainment Collection,M&E Collection,M&E
+MENT32,N/A,Mental ray Standalone,Mental Ray,M&E
+MENTAL-RAY-STANDALONE,N/A,Mental ray Standalone,Mental Ray,M&E
+MFDLC,N/A,Moldflow Design Link for CATIA V5,Moldflow,D&M
+MFDLP,N/A,Moldflow,Moldflow,D&M
+MFDLPE,N/A,Moldflow,Moldflow,D&M
+MFGACS,N/A,Moldflow,Moldflow,D&M
+MFGDEXUTLP,N/A,Manufacturing Data Exchange Utility - Premium,Manufacturing Data Exchange Utility,D&M
+MFGPLMACS,N/A,PLM 360,PLM 360,D&M
+MFGPPUTL,N/A,tredence_analytics Manufacturing Post Processor Utility,Manufacturing Post Processor Utility,D&M
+MFIWS,N/A,Moldflow Insight Standard,Moldflow,D&M
+MFIWSA,N/A,Moldflow Insight Family,Moldflow,D&M
+MFLEX,N/A,tredence_analytics Moldflow Flex,Moldflow,D&M
+MFLSER,N/A,Moldflow,Moldflow,D&M
+MG DWG EXT,N/A,tredence_analytics MapGuide,MapGuide,AEC
+MG SERVER,N/A,tredence_analytics MapGuide,MapGuide,AEC
+MGAGDS,N/A,tredence_analytics MapGuide Enterprise,MapGuide,AEC
+MOCKUP-360,N/A,Mockup 360,Mockup 360,D&M
+MOLDEX3D-COMP,N/A,Unknown,Moldflow,D&M
+MOLDFLOW,N/A,Moldflow,Moldflow,D&M
+MOLDFLOW-DESIGN,N/A,Moldflow Design,Moldflow,D&M
+MOLDFOW,N/A,Moldflow,Moldflow,D&M
+MOTIONBUILDER,N/A,MotionBuilder,MotionBuilder,M&E
+MUDBOX,N/A,Mudbox,Mudbox,M&E
+MUP360,N/A,Mockup 360,Mockup 360,D&M
+MXECSP,N/A,3ds Max,3ds Max,M&E
+MYECSP,N/A,Maya Entertainment Creation Suite Standard,M&E Collection,M&E
+NASTRAN,N/A,Nastran,Configurator 360,D&M
+NASTRAN-IN-CAD,N/A,Nastran In-CAD,Inventor,D&M
+NAVISWORKS,N/A,Navisworks,Navisworks,AEC
+NAVREV,N/A,tredence_analytics Navisworks Review,Navisworks,AEC
+NESTING-UTILITY,N/A,Inventor,Inventor,D&M
+NETFABB,N/A,Netfabb,Netfabb,D&M
+NWMMAN,N/A,tredence_analytics Navisworks Manufacturing Manage,Navisworks,AEC
+NWMREV,N/A,tredence_analytics Navisworks Manufacturing,Navisworks,AEC
+NWMSIM,N/A,Navisworks Simulate,Navisworks,AEC
+OPTIMIZATION-INVENTOR,N/A,Inventor,Inventor,D&M
+PDM-PRODUCTS,N/A,Product Design & Manufacturing Collection,D&M Collection,D&M
+PDMC,N/A,Product Design & Manufacturing Collection,D&M Collection,D&M
+PDSS,N/A,Product Design Suite Standard,D&M Collection,D&M
+PLC0000006,N/A,Vault Professional,Vault,D&M
+PLC0000037,N/A,DWG TrueView,DWF,Other
+PLM-360,N/A,PLM 360,PLM 360,D&M
+PMAKER,N/A,PartMaker,PartMaker,Other
+PMULHD,N/A,PowerMill Ultimate license holder,PowerMill,D&M
+POINT-LAYOUT,N/A,Point Layout,Point Layout,AEC
+POWERINSPECT,N/A,PowerInspect,PowerInspect,D&M
+POWERMILL,N/A,PowerMill,PowerMill,D&M
+POWERSHAPE,N/A,PowerShape - Premium,PowerShape,D&M
+PROANA,N/A,Process Analysis 360,Process Analysis 360,D&M
+PRODUCT-DESIGN-MANUFACTURING,N/A,Product Design & Manufacturing Collection,D&M Collection,D&M
+PROMOTIONS,Promotions,N/A,N/A,N/A
+PSR,N/A,Physical Shipment Requests(PSR),Unknown,Other
+PTPCRU,N/A,tredence_analytics Manufacturing Post Processor Utility,Manufacturing Post Processor Utility,D&M
+PWIULH,N/A,PowerInspect Ultimate license holder,PowerInspect,D&M
+PWRMMOD,N/A,PowerMill Modelling,PowerMill,D&M
+PWSPLH,N/A,PowerShape Premium license holder,PowerShape,D&M
+PWSSLH,N/A,PowerShape Standard license holder,PowerShape,D&M
+PWSULH,N/A,tredence_analytics PowerShape - Ultimate - license holder,PowerShape,D&M
+RAVS,N/A,AutoCAD Revit Architecture Visualization Suite,AutoCAD,AutoCAD Family
+REDSHIFT,Redshift,N/A,N/A,B&I
+REMAKE,N/A,ReCap,ReCap,AEC
+RENDERING,N/A,Rendering,Rendering,Other
+REVIT-FAMILY,N/A,Revit,Revit,AEC
+REVIT-LIVE,N/A,Revit Live,Revit,AEC
+REVIT-LT,N/A,Revit LT,Revit LT,AEC
+REVIT-LT-SUITE,N/A,Revit LT,Revit LT,AEC
+REVITS,N/A,AutoCAD Architecture,AutoCAD,AutoCAD Family
+REVSU,N/A,Revit,Revit,AEC
+REVSYP,N/A,Revit,Revit,AEC
+RNDRNG,N/A,Rendering,Rendering,Other
+ROBOT-STRUCTURAL-ANALYSIS,N/A,Architecture Engineering Construction Collection,AEC Collection,AEC
+RSA,N/A,Robot Structural Analysis Professional,Robot Structural Analysis Professional,D&M
+SARVT,N/A,Structural Analysis for Revit,Revit,AEC
+SCCOC,N/A,tredence_analytics Simulation CFD Connection for CoCreate,CFD,D&M
+SCCV5,N/A,tredence_analytics Simulation CFD Connection for Catia V5,CFD,D&M
+SCFDCI,N/A,tredence_analytics Simulation CFD Connection for Inventor,Inventor,D&M
+SCFDCR,N/A,Simulation CFD Connection for Revit,Revit,AEC
+SCFDSW,N/A,tredence_analytics Simulation CFD Connection for SolidWorks,CFD,D&M
+SCREENCAST,N/A,Screencast,Screencast,Other
+SEECA,N/A,Fusion Connect Advanced,Fusion,D&M
+SEECE,N/A,Fusion Connect Enterprise,Fusion,D&M
+SEECS,N/A,Fusion Connect,Fusion,D&M
+SFTIMA,N/A,tredence_analytics Softimage Advanced,softimage,M&E
+SHOPPING,Shopping,N/A,N/A,N/A
+SHOTGUN,N/A,Shotgun,Shotgun,M&E
+SIECS,N/A,tredence_analytics Maya with Softimage,Maya,M&E
+SIMULATION-MECHANICAL,N/A,Simulation Mechanical,Simulation Mechanical,D&M
+SKETCHBOOK,N/A,Sketchbook,SketchBook,M&E
+SMDFLS,N/A,Moldflow,Moldflow,D&M
+SMFLX,N/A,tredence_analytics Simulation Mechanical Flex,Simulation Mechanical,D&M
+SMLUS,N/A,Sim 360,Sim 360,D&M
+SMOKE,N/A,Smoke,Smoke,M&E
+SMP,N/A,Scaleform,Scaleform,Other
+SOFTIMAGE,N/A,softimage,softimage,M&E
+SPDS,N/A,SPDS,SPDS,Other
+STINGRAY,N/A,Stingray,Stingray,M&E
+STRUCTURAL-ANALYSIS-REVIT,N/A,Structural Analysis for Revit,Revit,AEC
+STRUCTURAL-BRIDGE-DESIGN,N/A,Structural Bridge Design,Revit,AEC
+STUDIO,N/A,Alias AutoStudio,Alias,D&M
+THOUGHT-LEADERSHIP,Thought Leadership,N/A,N/A,N/A
+TINKERCAD,N/A,Tinkercad,TinkerCAD,D&M
+TNU,TNU,N/A,N/A,N/A
+TRUCOMPOSITES,N/A,TruComposites Standard,Inventor,D&M
+TRUFBR,N/A,tredence_analytics TruFiber,TruFiber,D&M
+TRUFIBER,N/A,tredence_analytics TruFiber,TruFiber,D&M
+TRULASER,N/A,TruLaser,TruLaser,D&M
+TRUNESTPRODUCTS,N/A,Trunest Products,Trunest Products,D&M
+TRUPLAN,N/A,tredence_analytics TruPlan,TruPlan,D&M
+VAULT,N/A,Vault Professional,Vault,D&M
+VAULT-FAMILY,N/A,vault family,Vault,D&M
+VAULT-PLM,N/A,Vault PLM,Vault,D&M
+VEHICLE-TRACKING,N/A,Vehicle Tracking,Vehicle Tracking,AEC
+VISJBS,N/A,Cloud Credits,Cloud Credits,AEC
+VLTCON,N/A,Vault Professional,Vault,D&M
+VLTSAP,N/A,tredence_analytics Vault Integration for SAP ERP,Vault,D&M
+VRED,N/A,VRED,VRED,D&M
+VTCAEC,N/A,Vault Professional,Vault,D&M
+WA-A360,N/A,tredence_analytics 360,AutoCAD,AutoCAD Family
+WA-ACD360,N/A,AutoCAD 360,AutoCAD,AutoCAD Family
+WA-ALIASF,N/A,Alias Family,Alias,D&M
+WA-BIM360,N/A,Bim 360,BIM Family,AEC
+WA-BIM360FAM,N/A,BIM 360 Family,BIM Family,AEC
+WA-DWF,N/A,DWF Writer,DWF,Other
+WA-DWFC,N/A,DWF Community,DWF,Other
+WA-DWG,N/A,DWG Viewer,DWF,Other
+WA-DWGTV,N/A,DWG TrueView,DWF,Other
+WA-ECOTECT,N/A,Ecotect Analysis,Ecotect Analysis,AEC
+WA-FABP,N/A,Fabrication Products,Fabrication Products,D&M
+WA-FLAME,N/A,Flame Products,Flame,M&E
+WA-INVENTORETO,N/A,Inventor Engineer-to-Order,Inventor,D&M
+WA-INVENTORP,N/A,Inventor Products,Inventor,D&M
+WA-INVENTORV,N/A,Inventor View,Inventor,D&M
+WA-MF,N/A,Moldflow,Moldflow,D&M
+WA-MFIF,N/A,Moldflow Insight Family,Moldflow,D&M
+WA-NAVISF,N/A,Navisworks Family,Navisworks,AEC
+WA-PERPETUAL,N/A,Perpetual Licenses,Perpetual Licenses,Other
+WA-PLTDS,N/A,Plant Design Suite,Plant Design,AEC
+WA-SCRNCST,N/A,Screencast,Screencast,Other
+WA-SPDS,N/A,SPDS,SPDS,Other
+WA-STING,N/A,Stingray,Stingray,M&E
+WA-VAULTF,N/A,vault family,Vault,D&M
+WE-MAKE,We Make,N/A,N/A,N/A
+WEMAKE,We Make,N/A,N/A,N/A
+WITHIN-MEDICAL,N/A,tredence_analytics Within Medical,tredence_analytics Within Medical,Other
+WTGTWY,N/A,tredence_analytics Wiretap Gateway,tredence_analytics Wiretap Gateway,Other
+WTHNLBS,N/A,tredence_analytics Within Medical,tredence_analytics Within Medical,Other
+XXX2,N/A,Buzzsaw,Buzzsaw,AEC
+AISFCO,N/A,Assemble iSqFt Connect Office,ACS,AEC
+AISFCP,N/A,Assemble iSqFt Connect Project,ACS,AEC
+TFLEX,N/A,Token Flex,Token Flex,MULTI
+ATCIGM,N/A,Alias TC Integrator for GM,ALIAS,D&M
+ANSRF,N/A,ANSYS Referral Fee,ANSYS REFERRAL FEE,Programs
+BIMCOLL,N/A,BIM Collaborate,BIM COLLABORATE,AEC
+BLD550,N/A,Build - 550,BUILD,AEC
+BLD5K,N/A,Build - 5000,BUILD,AEC
+BLDUNLT,N/A,Build - Unlimited,BUILD,AEC
+CAMTM,N/A,CAMplete TurnMill,CAMPLETE,D&M
+CAMTMLU,N/A,CAMplete TurnMill - legacy user,CAMPLETE,D&M
+CAMTP,N/A,CAMplete TruePath,CAMPLETE,D&M
+CAMTPLU,N/A,CAMplete TruePath - legacy user,CAMPLETE,D&M
+DOCS,N/A,Docs for AEC Collection,DOCS FOR AEC COLLECTION,AEC
+RMNTRY,N/A,Fabrication RemoteEntry,FABRICATION,AEC
+TRCKIT,N/A,Fabrication Tracker,FABRICATION,AEC
+FLMTRN,N/A,Flame - transition,FLAME,M&E
+FLEXACCESS,N/A,Flex,FLEX,MULTI
+F360ME,N/A,Fusion 360 - Manage Extension,FUSION 360,D&M
+F360NFE,N/A,Fusion 360 - Nesting & Fabrication Extension,FUSION 360,D&M
+F36L3RD,N/A,Fusion 360 Manage - for third-party users,FUSION 360,D&M
+DRPREM,N/A,InfoDrainage - Premium,INFODRAINAGE,AEC
+INFDS,N/A,InfoDrainage - Standard,INFODRAINAGE,AEC
+INFDU,N/A,InfoDrainage - Ultimate,INFODRAINAGE,AEC
+INFWP,N/A,InfoWater Pro,INFOWATER,AEC
+IWICMS,N/A,InfoWorks ICM - Standard,INFOWATER,AEC
+WOICMP,N/A,InfoWorks ICM - Premium,INFOWATER,AEC
+IWWSPRO,N/A,InfoWorks WS Pro,INFOWORKS WS PRO,AEC
+WOWSPP,N/A,InfoWorks WS Pro - Premium,INFOWORKS WS PRO - PREMIUM,AEC
+INVYZJE,N/A,Innovyze - Journal Entry,INNOVYZE - JOURNAL ENTRY,AEC
+INVAS,N/A,Intent Professional,INTENT PROFESSIONAL,D&M
+INVRT,N/A,Inventor Runtime,INVENTOR RUNTIME,D&M
+JBEAE,N/A,Jitterbit Enterprise Additional Endpoints,JITTERBIT,D&M
+JBENT,N/A,Jitterbit Enterprise,JITTERBIT,D&M
+JBPAEP,N/A,Jitterbit Professional Additional Endpoints Premium,JITTERBIT,D&M
+LDXS,N/A,LandXplorer Studio,LANDXPLORER STUDIO,PSEB
+LSTRTRN,N/A,Lustre - transition,LUSTRE - TRANSITION,M&E
+NAVFREE,N/A,Navisworks Freedom,NAVISWORKS FREEDOM,AEC
+ACDLAND,N/A,tredence_analytics Land Desktop,OTHER,AEC
+ADTRPVC,N/A,CAiCE Visual Construction,OTHER,AEC
+ADTRPVR,N/A,CAiCE Visual Roads,OTHER,AEC
+ADTRPVS,N/A,CAiCE Visual Survey,OTHER,AEC
+ADTRPVSR,N/A,CAiCE Visual Survey & Roads,OTHER,AEC
+BF8KPA,N/A,tredence_analytics BIM 360 Field - Enterprise - ADD,OTHER,AEC
+IW360LT,N/A,InfraWorks 360 LT,OTHER,AEC
+LDXSP,N/A,LandXplorer Studio Professional,OTHER,AEC
+TOPOBSCLNT,N/A,tredence_analytics Topobase Client,OTHER,AEC
+URBNCNV,N/A,Urban Canvas,OTHER,AEC
+ALGSIM,N/A,tredence_analytics Algor Simulation,OTHER,D&M
+ASCFD,N/A,tredence_analytics Algor Simulation CFD,OTHER,D&M
+COALT,N/A,tredence_analytics Configure One - Advanced Large Team,OTHER,D&M
+COAST,N/A,tredence_analytics Configure One - Advanced Small Team,OTHER,D&M
+COAUT,N/A,tredence_analytics Configure One - Advanced Unlimited Team,OTHER,D&M
+COCADD,N/A,tredence_analytics Configure One - CADD Add On,OTHER,D&M
+COCS,N/A,tredence_analytics Configure One - Connect for SAP,OTHER,D&M
+COCSA,N/A,tredence_analytics Configure One - Connect for SAP Advanced,OTHER,D&M
+COELT,N/A,tredence_analytics Configure One - Enterprise Large Team,OTHER,D&M
+COEST,N/A,tredence_analytics Configure One - Enterprise Small Team,OTHER,D&M
+COEUT,N/A,tredence_analytics Configure One - Enterprise Unlimited Team,OTHER,D&M
+COPC,N/A,tredence_analytics Configure One - Premium Connection,OTHER,D&M
+COSC,N/A,tredence_analytics Configure One - Standard Connection,OTHER,D&M
+COSST,N/A,tredence_analytics Configure One - Starter Small Team,OTHER,D&M
+NCSE,N/A,tredence_analytics Nastran - cloud service entitlement,OTHER,D&M
+VLTC,N/A,tredence_analytics Vault Collaboration,OTHER,D&M
+ACDDS,N/A,AutoCAD Visualization Suite,OTHER,PSEB
+PCPRO,N/A,Productstream Professional PRO,OTHER,PSEB
+TOPOBS,N/A,tredence_analytics Topobase,OTHER,PSEB
+TOPOBSADM,N/A,tredence_analytics Topobase Administrator,OTHER,PSEB
+PSPSSC,N/A,Productstream Professional Database Products SQL Server Client Access,PRODUCTSTREAM,PSEB
+PYPEAUT,N/A,Pype AutoSpecs,PYPE AUTOSPECS,AEC
+PYPEB,N/A,Pype Bundle,PYPE BUNDLE,AEC
+PYPECLO,N/A,Pype Closeout,PYPE CLOSEOUT,AEC
+RETODEV,N/A,Revit ETO - Developer,REVIT ETO,D&M
+RETODP,N/A,Revit ETO - Distribution Package,REVIT ETO,D&M
+RETODST,N/A,Revit ETO - Distribution,REVIT ETO,D&M
+SGLI,N/A,ShotGrid - Local Install,SHOTGRID,M&E
+SGSUB,N/A,ShotGrid - Subscription,SHOTGRID,M&E
+SGUMLI,N/A,ShotGrid - User Months - Local Install,SHOTGRID,M&E
+SGUMSU,N/A,ShotGrid - User Months - Subscription,SHOTGRID,M&E
+SPCMKR,N/A,Spacemaker,SPACEMAKER,AEC
+QNTFY,N/A,Takeoff,TAKEOFF,AEC
+TANDEM,N/A,Tandem,TANDEM,AEC
+TUNLASS,N/A,Tandem - Unlimited Assets,TANDEM - UNLIMITED ASSETS,AEC
+UPCHN,N/A,Upchain,UPCHAIN,D&M
+UPPART,N/A,Upchain Participant,UPCHAIN,D&M
+UPPRO,N/A,Upchain Professional,UPCHAIN,D&M
+UPTEAM,N/A,Upchain Team,UPCHAIN,D&M
+INVVAU,N/A,Vault Basic - Server,VAULT BASIC - SERVER,D&M
+ADTRPVB,N/A,Visual Bridge,VISUAL BRIDGE,AEC

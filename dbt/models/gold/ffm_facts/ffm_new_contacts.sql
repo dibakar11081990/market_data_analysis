@@ -1,0 +1,89 @@
+-- =============================================================================
+-- LAYER  : Gold — Business Fact
+-- SUBFOLDER: middle_funnel
+-- MODEL  : ffm_new_contacts
+-- =============================================================================
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+-- Set the right tag
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+-- Set the configuration
+{{
+    config(
+        materialized='table'
+    )
+}}
+
+-- Set the post pipeline configuration
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_QA"
+    ]
+  )
+}}
+
+WITH CONTACT_INFO AS
+(
+    SELECT
+     STAGE.CONTACT_CREATED_DATE
+     ,STAGE.FYYEAR
+     ,STAGE.FYQUARTER
+     ,STAGE.FYMONTH
+     ,STAGE.FYWEEK
+     ,STAGE.CORE_MARKETABILITY_SOURCE
+     ,STAGE.GEO
+     ,COALESCE(LOWER(STAGE.SIC_INDUSTRY_SEGMENT),LOWER(STAGE.AC_INDUSTRY_SEGMENT)) INDUSTRY_SEGMENT
+     ,STAGE.AC_AUDIENCE
+     ,CASE
+        WHEN STAGE.SOLUTION_BUYER_PERSONA= 'TRUE' THEN 'SOLUTION_BUYER'
+        WHEN STAGE.EXECUTIVE_PERSONA= 'TRUE' THEN 'EXECUTIVE'
+        WHEN STAGE.VERY_SMALL_BUSINESS_PERSONA= 'TRUE' THEN 'VERY_SMALL_BUSINESS'
+        WHEN STAGE.ACCOUNT_ADMIN_PERSONA = 'TRUE' THEN 'ACCOUNT_ADMIN'
+        WHEN STAGE.END_USER_PERSONA = 'TRUE' THEN 'END_USER'
+        ELSE NULL
+     END PERSONA
+     ,STAGE.CUSTOMER_PHASE
+     ,STAGE.ABSM_FLAG
+     ,CASE
+        WHEN STAGE.ACCOUNT_CREATED_DATE<DATE(STAGE.CONTACT_CREATED_DATE) THEN 'TRUE'
+        ELSE 'FALSE'
+     END ACCOUNT_CONTACT_EXPANSION
+     ,COUNT(CASE WHEN STAGE.REPORTABLE = 'TRUE' THEN COALESCE(STAGE.SFDC_CONTACT_ID,STAGE.MARKETO_LEAD_ID)
+            END) NEW_MARKETABLE_CONTACT_COUNT
+     ,COUNT(CASE WHEN STAGE.REPORTABLE = 'FALSE' THEN COALESCE(STAGE.SFDC_CONTACT_ID,STAGE.MARKETO_LEAD_ID)
+            END) NEW_NON_MARKETABLE_CONTACT_COUNT
+     ,COUNT(COALESCE(STAGE.SFDC_CONTACT_ID,STAGE.MARKETO_LEAD_ID)) TOTAL_NEW_CONTACT
+     ,CURRENT_TIMESTAMP() AS DT
+     FROM {{ ref('FFM_NEW_CONTACTS_STAGE') }} STAGE
+     GROUP BY ALL
+)
+SELECT
+    CONTACT_CREATED_DATE
+     ,FYYEAR
+     ,FYQUARTER
+     ,FYMONTH
+     ,FYWEEK
+     ,CORE_MARKETABILITY_SOURCE
+     ,GEO
+     ,CASE WHEN UPPER(INDUSTRY_SEGMENT) NOT IN  ('UNKNOWN') THEN INDUSTRY_SEGMENT END INDUSTRY_SEGMENT
+     ,AC_AUDIENCE
+     ,PERSONA
+     ,ACCOUNT_CONTACT_EXPANSION
+     ,ABSM_FLAG
+     ,SUM(NEW_MARKETABLE_CONTACT_COUNT) NEW_MARKETABLE_CONTACT_COUNT
+     ,SUM(NEW_NON_MARKETABLE_CONTACT_COUNT) NEW_NON_MARKETABLE_CONTACT_COUNT
+     ,SUM(TOTAL_NEW_CONTACT) TOTAL_NEW_CONTACT
+     ,DT
+ FROM CONTACT_INFO
+ -- added new changes for GreenField MOTMDSA2336
+  --WHERE ABSM_FLAG in ('Territory','Greenfield')
+-- removing Greenfield from Territory bkt and including it in ABSM bkt MOTMDSA2449
+ --WHERE ABSM_FLAG='Territory'
+
+ GROUP BY ALL
+ 

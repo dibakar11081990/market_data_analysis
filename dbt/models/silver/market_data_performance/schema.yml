@@ -1,0 +1,392 @@
+version: 2
+
+models:
+  # ──────────────────────────────────────────────────────────────────────────
+  # STEP 2 — Column rename + business filtering
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: MDP_I360_BREAKOUT
+    description: >
+      Silver layer — renames raw columns to clean snake_case names, derives
+      YEAR_QUARTER, RR_STATUS, CAMPAIGN_INDUSTRY, CAMPAIGN_PARENT, and
+      CAMPAIGN_CHILD fields. Applies business-level plan status filters and
+      excludes known bad CLAIM_NUMBER / PLANDETAILID combinations.
+      Upstream: bronze.MDP_I360_RAW
+    tags:
+      - silver
+      - market_data_performance
+      - column_rename
+
+    columns:
+      - name: PLAN_ID
+        description: Renamed from PLANID. Unique plan identifier.
+        tests:
+          - not_null
+      - name: PLANDETAILID
+        description: Plan detail line identifier.
+        tests:
+          - not_null
+      - name: FUND_NAME
+        description: Fund name (renamed from FUNDNAME).
+        tests:
+          - not_null
+      - name: CUSTOMER_ID
+        description: Partner CSN (renamed from CUSTOMERID).
+      - name: PLAN_STATUS
+        description: Plan status (renamed from PLANSTATUS), filtered to approved/active statuses only.
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - "Approved"
+                - "Approved with Exception"
+                - "Claimed for Payment"
+                - "Draft Claim"
+                - "Paid"
+                - "Routed for Approval"
+                - "Ready for Payment"
+      - name: YEAR_QUARTER
+        description: Derived fiscal year-quarter string (e.g. 2022Q1) built from FUND_NAME.
+        tests:
+          - not_null
+      - name: RR_STATUS
+        description: >
+          Mapped claim audit status label for results reporting
+          (e.g. 'Results Report Approved', 'Pending Results Review').
+      - name: CAMPAIGN_INDUSTRY
+        description: Industry segment derived from CAMPAIGN_NAME (AEC, AUTOCAD, D&M, M&E, X-INDUSTRY, GFP).
+      - name: CAMPAIGN_PARENT
+        description: Parent campaign name (truncated at second underscore if present).
+      - name: CAMPAIGN_CHILD
+        description: Full campaign name used as child key.
+      - name: CLAIM_NUMBER
+        description: Renamed from CLAIMNUMBER.
+      - name: CLAIM_AUDIT_STATUS
+        description: Renamed from CLAIMAUDITSTATUS.
+      - name: CLAIM_SUBMITTED_DATE
+        description: Renamed from CLAIMSUBMITTEDDATE.
+      - name: PLAN_SUBMISSION_DATE
+        description: Renamed from PLANSUBMISSIONDATE.
+      - name: ACTIVITY_BEGIN_DATE
+        description: Renamed from ACTIVITYBEGINDATE.
+      - name: ACTIVITY_END_DATE
+        description: Renamed from ACTIVITYENDDATE.
+      - name: COMBINED_INVESTMENT
+        description: Renamed from PLANINVESTMENTAMOUNTCONVERTEDTOUSD.
+      - name: CAMPAIGN_NAME
+        description: Campaign name (renamed from "CAMPAIGN NAME").
+      - name: CAMPAIGN_PERCENTAGE
+        description: Decimal campaign split percentage (renamed from "CAMPAIGN PERCENTAGE").
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "CAMPAIGN_PERCENTAGE >= 0 AND CAMPAIGN_PERCENTAGE <= 100"
+              config:
+                where: "CAMPAIGN_PERCENTAGE IS NOT NULL"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # STEP 3 — De-duplicate multiple claim statuses per plan
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: MDP_I360_BREAKOUT_FILTERED
+    description: >
+      Silver layer — resolves plans that have multiple CLAIM_AUDIT_STATUS values.
+      Single-status plans pass through unchanged. Multi-status plans keep the
+      most-recently-submitted non-cancelled row (ROW_NUMBER window).
+      Upstream: silver.MDP_I360_BREAKOUT
+    tags:
+      - silver
+      - market_data_performance
+      - deduplication
+
+    columns:
+      - name: PLAN_ID
+        description: Unique plan identifier.
+        tests:
+          - not_null
+      - name: FUND_NAME
+        description: Fund name.
+        tests:
+          - not_null
+      - name: ACTIVITY
+        description: Marketing activity type.
+      - name: PUBLICATION_NAME
+        description: Publication / activity name.
+      - name: PLAN_STATUS
+        description: Plan status (inherited from BREAKOUT).
+        tests:
+          - not_null
+      - name: CLAIMAUDITSTATUS_NEW
+        description: Mapped claim audit status label (same as RR_STATUS logic).
+      - name: CLAIM_SUBMITTED_DATE
+        description: Date the claim was submitted.
+
+    tests:
+      # After filtering, each (PLAN_ID, FUND_NAME, ACTIVITY, PUBLICATION_NAME, PLAN_STATUS)
+      # combination should have at most one CLAIMAUDITSTATUS_NEW value.
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - PLAN_ID
+            - FUND_NAME
+            - ACTIVITY
+            - PUBLICATION_NAME
+            - PLAN_STATUS
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # STEP 4 — Enrichment staging (account lookup, GTM tier, engagement metrics)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: MDP_I360_STG
+    description: >
+      Silver layer — enriches de-duplicated 360i breakout data with partner
+      account details (SFDC), GTM tier, partner type, maturity, MDF gate quarter,
+      submission gate compliance, and engagement completeness flags.
+      All financial amounts are adjusted by campaign percentage splits.
+      Upstream: silver.MDP_I360_BREAKOUT_FILTERED
+    tags:
+      - silver
+      - market_data_performance
+      - enrichment
+
+    columns:
+      - name: CSN
+        description: Partner Customer Serial Number (from i360 CUSTOMER_ID).
+        tests:
+          - not_null
+      - name: YEAR_QUARTER
+        description: Fiscal year quarter string (e.g. 2023Q2).
+        tests:
+          - not_null
+      - name: GEO
+        description: Geographic region derived from COUNTRY field.
+      - name: SUB_REGION
+        description: Sub-region (trailing dash-suffix stripped).
+      - name: PARTNER_TYPE
+        description: Partner type (VAD, VAR, or derived from Salesforce contract).
+      - name: TIER
+        description: Partner tier from Salesforce contract.
+      - name: GTM_TIER
+        description: >
+          Go-to-market tier (A/B/C/D). Resolved from PRIMARY_TARGET_GEO
+          or account GTM lookup; defaults to 'D'.
+        tests:
+          - accepted_values:
+              values: ["A", "B", "C", "D"]
+              config:
+                where: "GTM_TIER IS NOT NULL"
+      - name: MATURITY
+        description: Partner maturity classification (Emerging / Mature).
+        tests:
+          - accepted_values:
+              values: ["Emerging", "Mature"]
+              config:
+                where: "MATURITY IS NOT NULL"
+      - name: PLAN_STATUS
+        description: Plan status (passed through from BREAKOUT_FILTERED).
+        tests:
+          - not_null
+      - name: METRIC_NAME
+        description: Always 'Spend' for this model.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Spend"]
+      - name: SUM_OF_MDF_FUNDED
+        description: MDF funded amount adjusted by campaign percentage split.
+      - name: COMBINED_INVESTMENT
+        description: Combined investment amount adjusted by campaign percentage split.
+      - name: ENGAGEMENT_COMPLETE
+        description: Whether the partner completed engagement (Yes/No).
+        tests:
+          - accepted_values:
+              values: ["Yes", "No"]
+              config:
+                where: "ENGAGEMENT_COMPLETE IS NOT NULL"
+      - name: SUBMISSION_GATE_COMPLIANT
+        description: Whether the plan was submitted within the gate deadline (Y/N).
+        tests:
+          - accepted_values:
+              values: ["Y", "N"]
+              config:
+                where: "SUBMISSION_GATE_COMPLIANT IS NOT NULL"
+      - name: FR_NAME
+        description: Fund request name (from PLAN_ID).
+      - name: FR_ACTIVITY_NAME
+        description: Fund request activity name (from PLANDETAILID).
+      - name: ACTIVITY_TYPE
+        description: Marketing activity type.
+      - name: ACTIVITY_NAME
+        description: Activity / publication name.
+      - name: SUM_OF_NBR_ATTENDEES
+        description: Total attendees (online + live), weighted by campaign percentage.
+      - name: SUM_OF_NBR_OF_COMPLETED_TM_CALLS
+        description: Completed telemarketing calls, weighted by campaign percentage.
+      - name: SUM_OF_NBR_OF_ONLINE_MEDIA_CLICKS
+        description: Online media clicks, weighted by campaign percentage.
+      - name: MQLS
+        description: Marketing qualified leads (actual), weighted by campaign percentage.
+      - name: RR_STATUS
+        description: Results reporting status label.
+      - name: YEAR_QUARTER_LINK
+        description: >
+          Fiscal year-quarter label formatted as 'FY22 Q1' for lookup joins.
+          Defaults to 'FY21 Q4' for pre-FY22 data.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # STEP 5 — Legacy QV data consolidation
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: LEGACY_QV_DATA
+    description: >
+      Silver layer — consolidates historical spend data from two legacy QlikView
+      sources (CCI_REPORT and MDF_ROI_ROLL_UP) with budget data from the global
+      MDF budget tables. Outputs a unified schema matching the i360 staging model
+      for downstream union operations.
+      Upstream: external vars (QV_LEGACY.CCI_REPORT, QV_LEGACY.MDF_ROI_ROLL_UP,
+      MDF_LOOKUPS.GLOBAL_MDF_BUDGET_CURRENT, MDF_LOOKUPS.GLOBAL_MDF_BUDGET)
+    tags:
+      - silver
+      - market_data_performance
+      - legacy_data
+
+    columns:
+      - name: METRIC_NAME
+        description: Either 'Spend' (legacy activity records) or 'Budget'.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Spend", "Budget"]
+      - name: YEAR_QUARTER
+        description: Fiscal year-quarter string.
+        tests:
+          - not_null
+      - name: GEO
+        description: Geographic region.
+      - name: SUB_REGION
+        description: Sub-region.
+      - name: MATURITY
+        description: Partner maturity classification.
+      - name: GTM_TIER
+        description: Go-to-market tier (defaults to 'D' for budget rows).
+      - name: FR_NAME
+        description: Fund request name (NULL for budget rows).
+      - name: SUM_OF_MDF_FUNDED
+        description: MDF funded amount.
+      - name: SUM_OF_METRIC_VALUE
+        description: Either spend or budget amount.
+        tests:
+          - not_null
+
+    tests:
+      # Budget rows should not have FR_NAME populated
+      - dbt_utils.expression_is_true:
+          expression: "NOT (METRIC_NAME = 'Budget' AND FR_NAME IS NOT NULL)"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # STEP 6 — Merge legacy QV with e2open (CCI_SCORECARD_VCP_NEW_FINAL)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: LEGACY_QV_DATA_AND_E2OPEN
+    description: >
+      Silver layer — unions LEGACY_QV_DATA with new e2open records from
+      CCI_SCORECARD_VCP_NEW_FINAL that are NOT already present in LEGACY_QV_DATA
+      (anti-join on FR_NAME). Enriches GEO and SUB_REGION for Spend rows using
+      Salesforce account data.
+      Upstream: silver.LEGACY_QV_DATA, external CCI_SCORECARD_VCP_NEW_FINAL
+    tags:
+      - silver
+      - market_data_performance
+      - legacy_merge
+
+    columns:
+      - name: METRIC_NAME
+        description: Spend or Budget.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Spend", "Budget"]
+      - name: YEAR_QUARTER
+        description: Fiscal year-quarter string.
+        tests:
+          - not_null
+      - name: YEAR_QUARTER_LINK
+        description: >
+          Fiscal year-quarter label (e.g. 'FY22 Q3') for joining with partner lists.
+          Defaults to 'FY21 Q4' for pre-2022 records.
+        tests:
+          - not_null
+      - name: GEO
+        description: Geographic region (enriched via SFDC account for Spend rows).
+      - name: SUB_REGION
+        description: Sub-region (GCR grouping applied for China/HK/Taiwan).
+      - name: FR_NAME
+        description: Fund request name.
+      - name: CSN
+        description: Partner Customer Serial Number.
+      - name: GTM_TIER
+        description: Go-to-market tier.
+      - name: SUM_OF_MDF_FUNDED
+        description: MDF funded amount.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # STEP 7 — Final combined silver (360i + Legacy + Budget)
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: MDF_360I_EXPORT_WITH_LEGACY_E2
+    description: >
+      Silver layer — unions MDP_I360_STG (current 360i data) with
+      LEGACY_QV_DATA_AND_E2OPEN (historical QV + e2open data). Applies final
+      sub-region normalisation (MCO, NAMER), PMM/CMM lookup, ROI compliance
+      flag, and focus partner flag. Filters out 'Funded Head' activity types
+      and retains only Spend + Budget rows.
+      Upstream: silver.MDP_I360_STG, silver.LEGACY_QV_DATA_AND_E2OPEN
+    tags:
+      - silver
+      - market_data_performance
+      - combined_export
+
+    columns:
+      - name: METRIC_NAME
+        description: Spend or Budget.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Spend", "Budget"]
+      - name: YEAR_QUARTER
+        description: Fiscal year-quarter string.
+        tests:
+          - not_null
+      - name: GEO
+        description: Geographic region (Americas normalised to AMER).
+      - name: SUB_REGION
+        description: Sub-region (MCO and NAMER normalisation applied).
+      - name: GTM_TIER
+        description: Go-to-market tier (defaults to 'D' if NULL).
+        tests:
+          - not_null
+      - name: PMM
+        description: Partner Marketing Manager name (defaults to 'Undefined' if NULL).
+      - name: PARTNER_TYPE
+        description: Partner type classification.
+      - name: TIER
+        description: Partner tier.
+      - name: CSN
+        description: Partner Customer Serial Number.
+      - name: FOCUS_PARTNER
+        description: Whether this is a named/focus partner (Y/N).
+        tests:
+          - accepted_values:
+              values: ["Y", "N"]
+              config:
+                where: "FOCUS_PARTNER IS NOT NULL"
+      - name: ROI_COMPLIANT
+        description: >
+          Whether the partner met ROI compliance requirements.
+          Space (' ') for pre-FY22Q4 data; 'Yes'/'No' for later records.
+      - name: ENGAGEMENT_COMPLETE
+        description: Engagement completion flag.
+      - name: ACTIVITY_TYPE
+        description: Marketing activity type (Funded Head excluded upstream).
+      - name: YEAR_QUARTER_LINK
+        description: Fiscal year-quarter label for CMM partner list joins.
+        tests:
+          - not_null
+      - name: SUM_OF_MDF_FUNDED
+        description: MDF funded amount.
+      - name: SUM_OF_METRIC_VALUE
+        description: Spend or budget metric value.
+        tests:
+          - not_null

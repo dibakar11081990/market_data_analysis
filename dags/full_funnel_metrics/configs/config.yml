@@ -1,0 +1,28 @@
+dag:
+  owner: airflow
+  id: full_funnel_metrics
+  schedule_interval: 30 7,12,16 * * 1-5
+  email: dibakar11081990@gmail.com
+
+tasks:
+  TASK_DBT_RUN_FFM : 'TASK_DBT_RUN_FFM'
+  TASK_DBT_PRE_REFRESH_TESTS_FFM : 'TASK_DBT_PRE_REFRESH_TESTS_FFM'
+  TASK_DBT_POST_REFRESH_TESTS_FFM : 'TASK_DBT_POST_REFRESH_TESTS_FFM'
+  TASK_REVMART_SQLSENSOR : 'TASK_REVMART_SQLSENSOR'
+  TASK_ADOBE_SQLSENSOR : 'TASK_ADOBE_SQLSENSOR'
+  TASK_MARKETABILITY_SQLSENSOR : 'TASK_MARKETABILITY_SQLSENSOR'
+  TASK_EIOCUSTOMER_SQLSENSOR : 'TASK_EIOCUSTOMER_SQLSENSOR'
+  TASK_POLARIS_SQLSENSOR : 'TASK_POLARIS_SQLSENSOR'
+
+dbt_profile : 'ffm'
+
+tags:
+  DBT_TAG_FFM : 'tag:full_funnel_metrics'
+  DBT_TAG_FFM_POST_CHECKS : 'tag:full_funnel_metrics_post_check'
+  DBT_TAG_FFM_PRE_CHECKS : 'tag:full_funnel_metrics_pre_checks'
+  
+
+SENSOR_TIMEOUT : 900
+SENSOR_POKE_INTERVAL : 23*60*60
+#AIRFLOW UI Variable name which holds the Boolean value to decide whether to run post refresh checks or not
+RUN_POST_CHECKS_VARIABLE : "run_post_checks_for_full_funnel_metrics_dag"

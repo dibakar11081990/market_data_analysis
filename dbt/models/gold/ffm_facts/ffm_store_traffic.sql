@@ -1,0 +1,489 @@
+-- =============================================================================
+-- LAYER  : Gold — Business Fact
+-- SUBFOLDER: upper_funnel
+-- MODEL  : ffm_store_traffic
+-- =============================================================================
+-- depends_on: {{ ref('FFM_FIN_CALENDAR') }}
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+{# Set the right tag #}
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+{# Set the configuration #}
+{{
+    config(
+        materialized='incremental',
+        incremental_strategy='delete+insert',
+        unique_key='DT',
+        on_schema_change='append_new_columns',
+        cluster_by=['FISCAL_YEAR_AND_FISCAL_QUARTER_NAME', 'WEEK_NUMBER_FISCAL_QUARTER', 'SEGMENT_TYPE', 'DT']
+    )
+}}
+
+
+{# Set the Pre Hook configuration #}
+{{
+  config(
+    pre_hook = [
+        "SET START_DATE = (SELECT MAX(DT) + 1 FROM {{ this }}); " ,
+        "SET END_DATE   = (SELECT CURRENT_DATE()-1); ",
+        """{% if is_incremental() %}
+            DELETE FROM {{ this }} -- Deletes dates older than previous 12 quarters
+            WHERE DT IN (SELECT DATE_KEY 
+                            FROM {{ ref('FFM_FIN_CALENDAR') }} 
+                        WHERE FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER < -12)
+        {% endif %}"""
+    ]
+  )
+}}
+
+{# Set the Post Hook configuration #}
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "
+        -- MERGE statement to update ACCOUNT_CSN & BUSINESS_TIER for Matching Order IDs (match on either PO_NBR or BIC_ORDER_NBR)
+            MERGE INTO {{ this }} AS target
+            USING (
+                WITH TARGET_POS AS (
+                SELECT DISTINCT
+                    REGEXP_SUBSTR(ORDER_ID_DETAILS, '[0-9]+') AS ORDER_ID_EXTRACTED
+                FROM {{ this }}
+                WHERE REGEXP_SUBSTR(ORDER_ID_DETAILS, '[0-9]+') IS NOT NULL
+                  AND (ACCOUNT_CSN IS NULL OR BUSINESS_TIER IS NULL)
+                ),
+                FINMART_BASE AS (
+                SELECT
+                    NULLIF(PO_NBR, '*') AS PO_NBR,
+                    NULLIF(BIC_ORDER_NBR, '*') AS BIC_ORDER_NBR,
+                    NULLIF(CORPORATE_CSN, '*') AS CORPORATE_CSN,
+                    CASE WHEN UPPER(CORPORATE_NAMED_ACCOUNT_GROUP_NM) NOT IN ('UNKNOWN','*')
+                     THEN CORPORATE_NAMED_ACCOUNT_GROUP_NM END AS BUSINESS_TIER,
+                    LAST_UPDATED_DT
+                FROM {{ source('FINMART_PRIVATE', 'CVC_FINMART') }}
+                WHERE UPPER(RECORD_TYPE) IN ('BILLING', 'BOOKING_BILLING')
+                  AND TRANSACTION_DT >= '2023-05-01'
+                  AND (NULLIF(PO_NBR, '*') IS NOT NULL OR NULLIF(BIC_ORDER_NBR, '*') IS NOT NULL)
+                ),
+                FINMART_ORDER_KEYS AS (
+                    SELECT
+                        REGEXP_SUBSTR(PO_NBR,'[0-9]+') AS ORDER_KEY, CORPORATE_CSN, BUSINESS_TIER, LAST_UPDATED_DT
+                    FROM FINMART_BASE
+                    WHERE PO_NBR IS NOT NULL
+                    UNION ALL
+                    SELECT
+                        REGEXP_SUBSTR(BIC_ORDER_NBR,'[0-9]+') AS ORDER_KEY, CORPORATE_CSN, BUSINESS_TIER, LAST_UPDATED_DT
+                    FROM FINMART_BASE
+                    WHERE BIC_ORDER_NBR IS NOT NULL
+                ),
+                FINMART_DEDUP AS (
+                    SELECT ORDER_KEY, CORPORATE_CSN, BUSINESS_TIER
+                    FROM FINMART_ORDER_KEYS
+                    QUALIFY ROW_NUMBER() OVER (PARTITION BY ORDER_KEY ORDER BY LAST_UPDATED_DT DESC) = 1
+                )
+
+                SELECT
+                t.ORDER_ID_EXTRACTED,
+                f.CORPORATE_CSN,
+                f.BUSINESS_TIER
+                FROM TARGET_POS t
+                INNER JOIN FINMART_DEDUP f
+                ON t.ORDER_ID_EXTRACTED = f.ORDER_KEY
+            ) AS source
+            ON REGEXP_SUBSTR(target.ORDER_ID_DETAILS, '[0-9]+') = source.ORDER_ID_EXTRACTED
+            WHEN MATCHED THEN
+                UPDATE SET
+                target.ACCOUNT_CSN = COALESCE(source.CORPORATE_CSN, target.ACCOUNT_CSN),
+                target.BUSINESS_TIER = COALESCE(source.BUSINESS_TIER, target.BUSINESS_TIER)
+            "
+    ]
+  )
+}}
+
+WITH BASE AS (
+    SELECT *
+    FROM {{ ref('FFM_STORE_TRAFFIC_STAGE') }}
+    WHERE COALESCE(ORDER_ID_PLATFORM, '') <> 'DE'
+    AND DT BETWEEN $START_DATE AND $END_DATE
+),
+SITE_SEGMENTS AS (
+    SELECT DISTINCT DEC_GEO_SITE_SEGMENT, DEC_SITE_SEGMENT, CORE_GEO_SITE_SEGMENT, CORE_SITE_SEGMENT, SITE_NAME, PAGE_NAME, GEO_COUNTRY_CODE
+    FROM {{ source('DEC_ANALYTICS_SHARED', 'ADOBE_CORE_DEC_SITE_SEGMENTS') }}
+),
+CORE_SITE_SEGMENTS AS (
+    SELECT A.DT
+    , A.WEEK_NUMBER_FISCAL_QUARTER
+    , A.MONTH_NUMBER_IN_FISCAL_YEAR
+    , A.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME
+    , A.FISCAL_YEAR_NAME
+    , A.GEO_COUNTRY_CODE
+    , A.COUNTRY_NAME AS VISITOR_COUNTRY_NAME
+    , A.GEO AS VISITOR_GEO
+    , A.REGION_NAME AS VISITOR_REGION_NAME
+    , CASE 
+        WHEN CORE_SITE_SEGMENT = 'Brazil Website & eCommerce' THEN 'Brazil'
+        WHEN CORE_SITE_SEGMENT = 'Canada Website & eCommerce' THEN 'Canada'
+        WHEN CORE_SITE_SEGMENT = 'Japan Website & eCommerce' THEN 'Japan'
+        WHEN CORE_SITE_SEGMENT = 'Mexico Website & eCommerce' THEN 'Mexico'
+        WHEN CORE_SITE_SEGMENT = 'US (.COM) Website & eCommerce' THEN 'United States'
+    END AS SITE_COUNTRY_NAME
+    , CASE
+        WHEN CORE_SITE_SEGMENT = 'Brazil Website & eCommerce' THEN 'AMER'
+        WHEN CORE_SITE_SEGMENT = 'Canada Website & eCommerce' THEN 'AMER'
+        WHEN CORE_SITE_SEGMENT = 'Japan Website & eCommerce' THEN 'JAPAN'
+        WHEN CORE_SITE_SEGMENT = 'LATAM Website & eCommerce' THEN 'AMER'
+        WHEN CORE_SITE_SEGMENT = 'Mexico Website & eCommerce' THEN 'AMER'
+        WHEN CORE_SITE_SEGMENT = 'US (.COM) Website & eCommerce' THEN 'AMER'
+    END AS SITE_GEO
+    , CASE
+        WHEN CORE_SITE_SEGMENT = 'Brazil Website & eCommerce' THEN 'Latin America'
+        WHEN CORE_SITE_SEGMENT = 'Canada Website & eCommerce' THEN 'Canada'
+        WHEN CORE_SITE_SEGMENT = 'Japan Website & eCommerce' THEN 'Japan'
+        WHEN CORE_SITE_SEGMENT = 'LATAM Website & eCommerce' THEN 'Latin America'
+        WHEN CORE_SITE_SEGMENT = 'Mexico Website & eCommerce' THEN 'Latin America'
+        WHEN CORE_SITE_SEGMENT = 'US (.COM) Website & eCommerce' THEN 'United States'
+    END AS SITE_REGION_NAME
+    , A.GDPR_FLAG
+    , UPPER(A.PRODUCT_LINE_ID) AS PRODUCT_LINE_ID
+    , A.DEVICE_TYPE
+    , CASE
+        WHEN A.VISIT_NUMBER = 1 THEN 'NEW TRAFFIC'
+        ELSE 'VISITING TRAFFIC'
+    END AS TRAFFIC_TYPE
+    , A.LAST_TOUCH_CHANNEL
+    , A.FIRST_TOUCH_CHANNEL
+    , A.ACCOUNT_CSN
+    , A.CAMPAIGN_ID
+    , A.CAMPAIGN_NAME
+    , A.AKN_FLAG
+    , A.V24_EXCL_404
+    , A.EXCLUDE_NXM_CHANNEL
+    , A.EXCLUDE_MAX_MAYA
+    , A.EXCLUDE_SEGMENT_IND
+    , A.ORDER_ID_DETAILS
+    , A.VISIT_ID
+    , A.VISITOR_ID
+    , A.IS_CART_ADD
+    , A.SALES_PLATFORM
+    , A.SALES_CHANNEL_TYPE
+    , A.AGREEMENT_TYPE
+    , A.ORDER_ORIGIN
+    , A.IS_CART_ADD_VISIT
+    , A.CUSTOMER_HIT_DATE_TIME_PST
+    , A.PRODUCT_FAMILY
+    , A.PRODUCT_INDUSTRY
+    , A.CAMPAIGN_INDUSTRY
+    , A.BUSINESS_TIER
+    , A.PAGE_NAME
+    , A.SITE_NAME
+    , A.FLOW_STEP_DETAIL
+    , A.VIDEO_NAME
+    , A.IS_PAGE_VIEW
+    , A.IS_VIDEO_START
+    , A.IS_VIDEO_25_PERCENT
+    , A.IS_VIDEO_50_PERCENT
+    , A.IS_VIDEO_75_PERCENT
+    , A.IS_VIDEO_100_PERCENT
+    , A.EVENT_TYPE
+    , A.IS_FORM_SUBMIT_SUCCESS
+    , A.IS_FORM_SUBMIT_ATTEMPT
+    , A.LINK_DETAIL
+    , A.IS_LINK_CLICK
+    , A.POST_EVENT_LIST
+    , A.IS_ORDER
+    , A.TACTIC_ID
+    , B.CORE_GEO_SITE_SEGMENT
+    , B.CORE_SITE_SEGMENT
+    , B.DEC_GEO_SITE_SEGMENT
+    , B.DEC_SITE_SEGMENT
+    , 'Core Site' AS SEGMENT_TYPE
+    , SYSDATE() AS DBT_LOAD_DATETIME
+    FROM BASE A
+    INNER JOIN SITE_SEGMENTS B
+        ON LOWER(A.SITE_NAME) = LOWER(B.SITE_NAME)
+        AND LOWER(A.PAGE_NAME) = LOWER(B.PAGE_NAME)
+        AND LOWER(A.GEO_COUNTRY_CODE) = LOWER(B.GEO_COUNTRY_CODE)
+    WHERE B.CORE_SITE_SEGMENT IN 
+            ('Brazil Website & eCommerce',
+            'Canada Website & eCommerce',
+            'Japan Website & eCommerce',
+            'LATAM Website & eCommerce',
+            'Mexico Website & eCommerce',
+            'US (.COM) Website & eCommerce')
+    {# QUALIFY ROW_NUMBER() OVER (PARTITION BY A.DT, A.VISIT_ID, A.ORDER_ID_DETAILS, A.GEO_COUNTRY_CODE, A.PRODUCT_LINE_ID, A.DEVICE_TYPE, A.CAMPAIGN_ID, B.CORE_SITE_SEGMENT ORDER BY A.CUSTOMER_HIT_DATE_TIME_PST DESC) = 1 #}
+),
+CORE_GEO_SITE_SEGMENTS AS (
+    SELECT A.DT
+    , A.WEEK_NUMBER_FISCAL_QUARTER
+    , A.MONTH_NUMBER_IN_FISCAL_YEAR
+    , A.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME
+    , A.FISCAL_YEAR_NAME
+    , A.GEO_COUNTRY_CODE
+    , A.COUNTRY_NAME AS VISITOR_COUNTRY_NAME
+    , A.GEO AS VISITOR_GEO
+    , A.REGION_NAME AS VISITOR_REGION_NAME
+    , NULL AS SITE_COUNTRY_NAME
+    , CASE
+        WHEN CORE_GEO_SITE_SEGMENT = 'APAC ex. Japan Website & eCommerce' THEN 'APAC'
+        WHEN CORE_GEO_SITE_SEGMENT = 'EMEA Website & eCommerce' THEN 'EMEA'
+    END AS SITE_GEO
+    , NULL AS SITE_REGION_NAME
+    , A.GDPR_FLAG
+    , UPPER(A.PRODUCT_LINE_ID) AS PRODUCT_LINE_ID
+    , A.DEVICE_TYPE
+    , CASE
+        WHEN A.VISIT_NUMBER = 1 THEN 'NEW TRAFFIC'
+        ELSE 'VISITING TRAFFIC'
+    END AS TRAFFIC_TYPE
+    , A.LAST_TOUCH_CHANNEL
+    , A.FIRST_TOUCH_CHANNEL
+    , A.ACCOUNT_CSN
+    , A.CAMPAIGN_ID
+    , A.CAMPAIGN_NAME
+    , A.AKN_FLAG
+    , A.V24_EXCL_404
+    , A.EXCLUDE_NXM_CHANNEL
+    , A.EXCLUDE_MAX_MAYA
+    , A.EXCLUDE_SEGMENT_IND
+    , A.ORDER_ID_DETAILS
+    , A.VISIT_ID
+    , A.VISITOR_ID
+    , A.IS_CART_ADD
+    , A.SALES_PLATFORM
+    , A.SALES_CHANNEL_TYPE
+    , A.AGREEMENT_TYPE
+    , A.ORDER_ORIGIN
+    , A.IS_CART_ADD_VISIT
+    , A.CUSTOMER_HIT_DATE_TIME_PST
+    , A.PRODUCT_FAMILY
+    , A.PRODUCT_INDUSTRY
+    , A.CAMPAIGN_INDUSTRY
+    , A.BUSINESS_TIER
+    , A.PAGE_NAME
+    , A.SITE_NAME
+    , A.FLOW_STEP_DETAIL
+    , A.VIDEO_NAME
+    , A.IS_PAGE_VIEW
+    , A.IS_VIDEO_START
+    , A.IS_VIDEO_25_PERCENT
+    , A.IS_VIDEO_50_PERCENT
+    , A.IS_VIDEO_75_PERCENT
+    , A.IS_VIDEO_100_PERCENT
+    , A.EVENT_TYPE
+    , A.IS_FORM_SUBMIT_SUCCESS
+    , A.IS_FORM_SUBMIT_ATTEMPT
+    , A.LINK_DETAIL
+    , A.IS_LINK_CLICK
+    , A.POST_EVENT_LIST
+    , A.IS_ORDER
+    , A.TACTIC_ID
+    , B.CORE_GEO_SITE_SEGMENT
+    , B.CORE_SITE_SEGMENT
+    , B.DEC_GEO_SITE_SEGMENT
+    , B.DEC_SITE_SEGMENT
+    , 'Core Site' AS SEGMENT_TYPE
+    , SYSDATE() AS DBT_LOAD_DATETIME
+    FROM BASE A
+    INNER JOIN SITE_SEGMENTS B
+        ON LOWER(A.SITE_NAME) = LOWER(B.SITE_NAME)
+        AND LOWER(A.PAGE_NAME) = LOWER(B.PAGE_NAME)
+        AND LOWER(A.GEO_COUNTRY_CODE) = LOWER(B.GEO_COUNTRY_CODE)
+    WHERE B.CORE_GEO_SITE_SEGMENT IN ('APAC ex. Japan Website & eCommerce', 'EMEA Website & eCommerce')
+    {# QUALIFY ROW_NUMBER() OVER (PARTITION BY A.DT, A.VISIT_ID, A.ORDER_ID_DETAILS, A.GEO_COUNTRY_CODE, A.PRODUCT_LINE_ID, A.DEVICE_TYPE, A.CAMPAIGN_ID, B.CORE_GEO_SITE_SEGMENT ORDER BY A.CUSTOMER_HIT_DATE_TIME_PST DESC) = 1 #}
+),
+DEC_SITE_SEGMENTS AS (
+    SELECT A.DT
+    , A.WEEK_NUMBER_FISCAL_QUARTER
+    , A.MONTH_NUMBER_IN_FISCAL_YEAR
+    , A.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME
+    , A.FISCAL_YEAR_NAME
+    , A.GEO_COUNTRY_CODE
+    , A.COUNTRY_NAME AS VISITOR_COUNTRY_NAME
+    , A.GEO AS VISITOR_GEO
+    , A.REGION_NAME AS VISITOR_REGION_NAME
+    , CASE 
+        WHEN DEC_SITE_SEGMENT = 'DEC - Brazil Web & eComm' THEN 'Brazil'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Canada Web & eComm' THEN 'Canada'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Japan Web & eComm' THEN 'Japan'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Mexico Web & eComm' THEN 'Mexico'
+        WHEN DEC_SITE_SEGMENT = 'DEC - US Web & eComm' THEN 'United States'
+    END AS SITE_COUNTRY_NAME
+    , CASE
+        WHEN DEC_SITE_SEGMENT = 'DEC - Brazil Web & eComm' THEN 'AMER'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Canada Web & eComm' THEN 'AMER'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Japan Web & eComm' THEN 'JAPAN'
+        WHEN DEC_SITE_SEGMENT = 'DEC - LATAM Web & eComm' THEN 'AMER'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Mexico Web & eComm' THEN 'AMER'
+        WHEN DEC_SITE_SEGMENT = 'DEC - US Web & eComm' THEN 'AMER'
+    END AS SITE_GEO
+    , CASE
+        WHEN DEC_SITE_SEGMENT = 'DEC - Brazil Web & eComm' THEN 'Latin America'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Canada Web & eComm' THEN 'Canada'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Japan Web & eComm' THEN 'Japan'
+        WHEN DEC_SITE_SEGMENT = 'DEC - LATAM Web & eComm' THEN 'Latin America'
+        WHEN DEC_SITE_SEGMENT = 'DEC - Mexico Web & eComm' THEN 'Latin America'
+        WHEN DEC_SITE_SEGMENT = 'DEC - US Web & eComm' THEN 'United States'
+    END AS SITE_REGION_NAME
+    , A.GDPR_FLAG
+    , UPPER(A.PRODUCT_LINE_ID) AS PRODUCT_LINE_ID
+    , A.DEVICE_TYPE
+    , CASE
+        WHEN A.VISIT_NUMBER = 1 THEN 'NEW TRAFFIC'
+        ELSE 'VISITING TRAFFIC'
+    END AS TRAFFIC_TYPE
+    , A.LAST_TOUCH_CHANNEL
+    , A.FIRST_TOUCH_CHANNEL
+    , A.ACCOUNT_CSN
+    , A.CAMPAIGN_ID
+    , A.CAMPAIGN_NAME
+    , A.AKN_FLAG
+    , A.V24_EXCL_404
+    , A.EXCLUDE_NXM_CHANNEL
+    , A.EXCLUDE_MAX_MAYA
+    , A.EXCLUDE_SEGMENT_IND
+    , A.ORDER_ID_DETAILS
+    , A.VISIT_ID
+    , A.VISITOR_ID
+    , A.IS_CART_ADD
+    , A.SALES_PLATFORM
+    , A.SALES_CHANNEL_TYPE
+    , A.AGREEMENT_TYPE
+    , A.ORDER_ORIGIN
+    , A.IS_CART_ADD_VISIT
+    , A.CUSTOMER_HIT_DATE_TIME_PST
+    , A.PRODUCT_FAMILY
+    , A.PRODUCT_INDUSTRY
+    , A.CAMPAIGN_INDUSTRY
+    , A.BUSINESS_TIER
+    , A.PAGE_NAME
+    , A.SITE_NAME
+    , A.FLOW_STEP_DETAIL
+    , A.VIDEO_NAME
+    , A.IS_PAGE_VIEW
+    , A.IS_VIDEO_START
+    , A.IS_VIDEO_25_PERCENT
+    , A.IS_VIDEO_50_PERCENT
+    , A.IS_VIDEO_75_PERCENT
+    , A.IS_VIDEO_100_PERCENT
+    , A.EVENT_TYPE
+    , A.IS_FORM_SUBMIT_SUCCESS
+    , A.IS_FORM_SUBMIT_ATTEMPT
+    , A.LINK_DETAIL
+    , A.IS_LINK_CLICK
+    , A.POST_EVENT_LIST
+    , A.IS_ORDER
+    , A.TACTIC_ID
+    , B.CORE_GEO_SITE_SEGMENT
+    , B.CORE_SITE_SEGMENT
+    , B.DEC_GEO_SITE_SEGMENT
+    , B.DEC_SITE_SEGMENT
+    , 'eComm Eligible' AS SEGMENT_TYPE
+    , SYSDATE() AS DBT_LOAD_DATETIME
+    FROM BASE A
+    INNER JOIN SITE_SEGMENTS B
+        ON LOWER(A.SITE_NAME) = LOWER(B.SITE_NAME)
+        AND LOWER(A.PAGE_NAME) = LOWER(B.PAGE_NAME)
+        AND LOWER(A.GEO_COUNTRY_CODE) = LOWER(B.GEO_COUNTRY_CODE)
+    WHERE B.DEC_SITE_SEGMENT IN 
+            ('DEC - Brazil Web & eComm',
+            'DEC - Canada Web & eComm',
+            'DEC - Japan Web & eComm',
+            'DEC - LATAM Web & eComm',
+            'DEC - Mexico Web & eComm',
+            'DEC - US Web & eComm')
+    {# QUALIFY ROW_NUMBER() OVER (PARTITION BY A.DT, A.VISIT_ID, A.ORDER_ID_DETAILS, A.GEO_COUNTRY_CODE, A.PRODUCT_LINE_ID, A.DEVICE_TYPE, A.CAMPAIGN_ID, B.DEC_SITE_SEGMENT ORDER BY A.CUSTOMER_HIT_DATE_TIME_PST DESC) = 1 #}
+),
+DEC_GEO_SITE_SEGMENTS AS (
+    SELECT A.DT
+    , A.WEEK_NUMBER_FISCAL_QUARTER
+    , A.MONTH_NUMBER_IN_FISCAL_YEAR
+    , A.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME
+    , A.FISCAL_YEAR_NAME
+    , A.GEO_COUNTRY_CODE
+    , A.COUNTRY_NAME AS VISITOR_COUNTRY_NAME
+    , A.GEO AS VISITOR_GEO
+    , A.REGION_NAME AS VISITOR_REGION_NAME
+    , NULL AS SITE_COUNTRY_NAME
+    , CASE
+        WHEN DEC_GEO_SITE_SEGMENT = 'DEC - APAC ex Japan Web & eComm' THEN 'APAC'
+        WHEN DEC_GEO_SITE_SEGMENT = 'DEC - EMEA Web & eComm' THEN 'EMEA'
+    END AS SITE_GEO
+    , NULL AS SITE_REGION_NAME
+    , A.GDPR_FLAG
+    , UPPER(A.PRODUCT_LINE_ID) AS PRODUCT_LINE_ID
+    , A.DEVICE_TYPE
+    , CASE
+        WHEN A.VISIT_NUMBER = 1 THEN 'NEW TRAFFIC'
+        ELSE 'VISITING TRAFFIC'
+    END AS TRAFFIC_TYPE
+    , A.LAST_TOUCH_CHANNEL
+    , A.FIRST_TOUCH_CHANNEL
+    , A.ACCOUNT_CSN
+    , A.CAMPAIGN_ID
+    , A.CAMPAIGN_NAME
+    , A.AKN_FLAG
+    , A.V24_EXCL_404
+    , A.EXCLUDE_NXM_CHANNEL
+    , A.EXCLUDE_MAX_MAYA
+    , A.EXCLUDE_SEGMENT_IND
+    , A.ORDER_ID_DETAILS
+    , A.VISIT_ID
+    , A.VISITOR_ID
+    , A.IS_CART_ADD
+    , A.SALES_PLATFORM
+    , A.SALES_CHANNEL_TYPE
+    , A.AGREEMENT_TYPE
+    , A.ORDER_ORIGIN
+    , A.IS_CART_ADD_VISIT
+    , A.CUSTOMER_HIT_DATE_TIME_PST
+    , A.PRODUCT_FAMILY
+    , A.PRODUCT_INDUSTRY
+    , A.CAMPAIGN_INDUSTRY
+    , A.BUSINESS_TIER
+    , A.PAGE_NAME
+    , A.SITE_NAME
+    , A.FLOW_STEP_DETAIL
+    , A.VIDEO_NAME
+    , A.IS_PAGE_VIEW
+    , A.IS_VIDEO_START
+    , A.IS_VIDEO_25_PERCENT
+    , A.IS_VIDEO_50_PERCENT
+    , A.IS_VIDEO_75_PERCENT
+    , A.IS_VIDEO_100_PERCENT
+    , A.EVENT_TYPE
+    , A.IS_FORM_SUBMIT_SUCCESS
+    , A.IS_FORM_SUBMIT_ATTEMPT
+    , A.LINK_DETAIL
+    , A.IS_LINK_CLICK
+    , A.POST_EVENT_LIST
+    , A.IS_ORDER
+    , A.TACTIC_ID
+    , B.CORE_GEO_SITE_SEGMENT
+    , B.CORE_SITE_SEGMENT
+    , B.DEC_GEO_SITE_SEGMENT
+    , B.DEC_SITE_SEGMENT
+    , 'eComm Eligible' AS SEGMENT_TYPE
+    , SYSDATE() AS DBT_LOAD_DATETIME
+    FROM BASE A
+    INNER JOIN SITE_SEGMENTS B
+        ON LOWER(A.SITE_NAME) = LOWER(B.SITE_NAME)
+        AND LOWER(A.PAGE_NAME) = LOWER(B.PAGE_NAME)
+        AND LOWER(A.GEO_COUNTRY_CODE) = LOWER(B.GEO_COUNTRY_CODE)
+    WHERE B.DEC_GEO_SITE_SEGMENT IN ('DEC - APAC ex Japan Web & eComm', 'DEC - EMEA Web & eComm')
+    {# QUALIFY ROW_NUMBER() OVER (PARTITION BY A.DT, A.VISIT_ID, A.ORDER_ID_DETAILS, A.GEO_COUNTRY_CODE, A.PRODUCT_LINE_ID, A.DEVICE_TYPE, A.CAMPAIGN_ID, B.DEC_GEO_SITE_SEGMENT ORDER BY A.CUSTOMER_HIT_DATE_TIME_PST DESC) = 1 #}
+)
+
+SELECT * FROM CORE_SITE_SEGMENTS
+UNION ALL
+SELECT * FROM CORE_GEO_SITE_SEGMENTS
+UNION ALL
+SELECT * FROM DEC_SITE_SEGMENTS
+UNION ALL
+SELECT * FROM DEC_GEO_SITE_SEGMENTS

@@ -1,0 +1,412 @@
+-- =============================================================================
+-- LAYER  : Gold — Business Fact
+-- SUBFOLDER: middle_funnel
+-- MODEL  : ffm_mid_funnel
+-- =============================================================================
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+-- Set the right tag
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+-- Set the start and end dates 
+{{
+  config(
+    pre_hook = [
+        "SET START_DATE = (SELECT CALENDAR_DATE FROM ADP_PUBLISH.COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY WHERE FISCAL_QUARTER_VS_CURRENT_NUMBER=-12 AND  FISCAL_QUARTER_DAY_NUMBER=1);" ,
+        "SET END_DATE   = (SELECT CURRENT_DATE()-1);"
+    ]
+  )
+}}
+
+
+-- Set the post pipeline configuration
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_QA"
+    ]
+  )
+}}
+
+WITH MARKETABLE_DATA AS (
+    SELECT
+        DISTINCT SFDC_ACCOUNT_ID as  MARKETABILITY_SFDC_ACCOUNT_ID,
+        ACCOUNT_CSN as MARKETABILITY_ACCOUNT_CSN,
+        CORE_MARKETABILITY_SOURCE AS CORE_MARKETABILITY_SOURCE,
+        MARKETO_LEAD_ID ,
+        SFDC_CONTACT_ID AS MARKETABILITY_SFDC_CONTACT_ID,
+        DATE(CONTACT_CREATED_DATE) AS MARKETABILITY_CONTACT_CREATED_DATE,
+        GEO AS MARKETABILITY_GEO,
+        COUNTRY AS MARKETABILITY_COUNTRY,
+        REPORTABLE AS MARKETABILITY_REPORTABLE,
+        AC_INDUSTRY_SEGMENT AS MARKETABILITY_AC_INDUSTRY_SEGMENT,
+        SIC_INDUSTRY_SEGMENT AS MARKETABILITY_SIC_INDUSTRY_SEGMENT,
+        AC_AUDIENCE AS MARKETABILITY_AC_AUDIENCE,
+        END_USER_PERSONA AS MARKETABILITY_END_USER_PERSONA,
+        ACCOUNT_ADMIN_PERSONA AS MARKETABILITY_ACCOUNT_ADMIN_PERSONA,
+        EXECUTIVE_PERSONA AS MARKETABILITY_EXECUTIVE_PERSONA,
+        VERY_SMALL_BUSINESS_PERSONA AS MARKETABILITY_VERY_SMALL_BUSINESS_PERSONA,
+        SOLUTION_BUYER_PERSONA AS MARKETABILITY_SOLUTION_BUYER_PERSONA,
+        ABSM_FLAG AS MARKETABILITY_ABSM_FLAG
+    FROM
+        {{ var('MARKETABILITY') }}
+    WHERE
+        DATE(CONTACT_CREATED_DATE) BETWEEN $START_DATE AND $END_DATE
+),
+SFDC_SUPERSET as (
+    select
+        distinct 'LEADS_SFDC_DELIVERED' as SOURCE,a.OPPORTUNITY_ID__C AS OPPORTUNITY_GUID,
+        a.id as OPPORTUNITY_ID,
+        a.stagename as OPPORTUNITY_STAGE_NAME,
+        L.ID AS LEAD_GUID,
+        L.LEAD_ID__C AS LEAD_ID,
+        L.ACCOUNT_CSN__C AS LEAD_ACCOUNT_CSN,
+        e.prospect_id__c as LEAD_PROSPECT_ID,
+        e.product_interest__c as LEAD_PRODUCT_INTEREST,
+        E.NAME AS PROSPECT_INTEREST_NAME,
+        e.id as PROSPECT_INTEREST_ID,
+        DATE(e.CREATEDDATE) AS PROSPECT_CREATE_DATE,
+        e.status__c as PI_STATUS,
+        e.reason__c as PI_REASON,
+        E.LEAD_TYPE__C AS PI_TYPE,
+        E.MARKETING_ACTIVITY_ID__C AS PI_TACTIC_ID,
+        E.ACTIVITY_NAME__C AS PI_TACTIC_NAME,
+        CASE
+             WHEN LEN (E.MARKETING_ACTIVITY_ID__C) = 10 AND IS_INTEGER (TRY_TO_NUMBER (E.MARKETING_ACTIVITY_ID__C)) THEN LEFT (E.MARKETING_ACTIVITY_ID__C,7)
+             WHEN LEN (E.MARKETING_ACTIVITY_ID__C) IN (6,7) AND IS_INTEGER (TRY_TO_NUMBER (E.MARKETING_ACTIVITY_ID__C)) THEN E.MARKETING_ACTIVITY_ID__C
+        ELSE NULL
+       END AS PI_TACTIC_KEY,
+       E.LEAD_TYPE__C AS PI_LEAD,
+       --TO_VARCHAR("_FIVETRAN_SYNCED",'YYYYMMDD') AS DT
+       TO_DATE(LEFT (TO_VARCHAR(E._FIVETRAN_SYNCED,'YYYYMMDD'),4) || '-' ||right (LEFT (TO_VARCHAR(E._FIVETRAN_SYNCED,'YYYYMMDD'),6),2) || '-' ||right (TO_VARCHAR(E._fivetran_synced,'YYYYMMDD'),2),'YYYY-MM-DD') AS PI_TABLE_LAST_REFRESH_DATE,
+
+
+        L.isconverted As LEAD_IS_CONVERTED,
+        L.campaign__c AS LEAD_CAMPAIGN,
+        L.convertedaccountid AS LEAD_CONVERTED_ACCOUNT_ID,
+        L.convertedcontactid AS LEAD_CONVERTED_CONTACT_ID,
+        a.acv__c AS OPPORTUNIY_ACV,
+        c.marketo_lead_id__c,
+        c.oxygen_id__c,
+        c.accountid,
+        L.CONTACT__C AS LEAD_CONTACT__C,
+        L.CREATEDDATE AS LEAD_CREATED_DATE,
+        L.LEAD_CLOSED_DATE__C AS LEAD_CLOSED_DATE,
+        L.CONVERTED_TO_LEAD_DATE__C AS LEAD_CONVERTED_TO_LEAD_DATE,
+        DATE(L.LEAD_REOPENED_DATE__C) AS LEAD_REOPENED_DATE,
+        DATE (
+            GREATEST(
+                COALESCE(l.LEAD_REOPENED_DATE__C, '0000-01-01'),
+                COALESCE(l.CONVERTED_TO_LEAD_DATE__C, '0000-01-01'),
+                COALESCE(l.CREATEDDATE, '0000-01-01')
+            )
+        ) AS LEAD_RECEIVED_DATE,
+        DATE (
+            COALESCE(l.CONVERTED_TO_LEAD_DATE__C, l.CREATEDDATE)
+        ) AS LEAD_DELIVERED_TO_SALES_DATE,
+        L.SALES_GEO__C AS LEAD_SALES_GEO,
+        L.COUNTRY AS LEAD_COUNTRY,
+        L.GEO__C AS ORIGINAL_LEAD_GEO,
+        L.LEAD_TYPE__C AS LEAD_TYPE,
+        L.STATUS AS LEAD_STATUS,
+        L.STATUS_REASON__C AS LEAD_STATUS_REASON,
+        L.ISDELETED AS LEAD_IS_DELETED,
+        L.LASTACTIVITYDATE AS LEAD_LAST_ACTIVITY_DATE,
+        L.FIRST_ACTIVITY_START_DATE__C AS LEAD_FIRST_ACTIVITY_START_DATE,
+        L.COMPANY AS LEAD_COMPANY_ACCOUNT,
+        L.SALES_ROLE_USER__C AS CREATED_BY_SALES_ROLE,
+        L.CONVERTEDOPPORTUNITYID AS LEAD_CONVERTED_OPPORTUNITY_ID,
+        L.FAST_TRACK_TYPE__C AS LEAD_FAST_TRACK_TYPE__C,
+        L.TELEQUALIFIED__C AS LEAD_TELEQUALIFIED__C,
+        L.ACCOUNT__C AS LEAD_ACCOUNT__C,
+        L.RESPONSE_TYPE__C AS LEAD_RESPONSE_TYPE__C,
+        L.LEAD_SOURCE__C AS LEAD_SOURCE__C,
+        L.PRODUCTINFO__C AS LEAD_PRODUCTINFO__C,
+        L.APRIMO_ACTIVITY_ID__C AS LEAD_APRIMO_ACTIVITY_ID,
+        L.LEAD_SCORE2__C,
+        L.MI_SCORE__C AS LEAD_MI_SCORE__C,
+        L.LEADSOURCE AS SFDC_LEAD_SOURCE,
+        L.CONVERTED_DATE__C AS LEAD_CONVERTED_DATE,
+        L.LASTTRANSFERDATE AS LEAD_TABLE_LAST_REFRESH_DATE,
+        L.PARTNER_ACCOUNT__C AS LEAD_PARTNER_ACCOUNT,
+        L.OWNERID AS LEAD_OWNER_ID,
+        L.CREATEDBYID AS LEAD_CREATED_BY_ID,
+        L.SALES_COUNTRY__C AS LEAD_SALES_COUNTRY,
+        l.NAME AS LEAD_CREATED_BY_NAME,
+        L.LASTMODIFIEDDATE AS LEAD_LAST_MODIFIED_DATE,
+        L.marketo_lead_id__c AS LEAD_MARKETO_LEAD_ID__C,
+        L.ACCEPTED_DATE__C AS ACCEPTED_DATE,
+        L.CUSTOMER_INITIATIVES__C,
+        d.id as OPPO_CAMPAGIN_ID,
+        d.allocadia_id__c as OPPO_ALLOCADIA_ID,
+        d.name as OPPO_CAMPIAGN_NAME,
+        d.campaign_type__c as OPPO_CAMPAIGN_TYPE__C,
+        d.type as OPPO_CAMPAIGN_TYPE,
+        d.type_detail__c as OPPO_CAMPAIGN_TYPE_DETAIL,
+        d.target_sales_channel__c as OPPO_CAMPAIGN_TARGET_SALES_CHANNEL,
+        d.customer_journey__c as OPPO_CAMPAIGN_CUSTOMER_JOURNEY,
+        d.category__c as OPPO_CAMPAIGN_CATEGORY,
+        d.global_geo__c as OPPO_CAMPAIGN_GLOBAL_GEO,
+        d.global_campaign__c as OPPO_CAMPAIGN_GLOBAL_CAMPAIGN,
+        d.program_product__c as OPPO_CAMPAIGN_PROGRAM_PRODUCT_NAME,
+        d.program_short_name__c as OPPO_CAMPAIGN_PROGRAM_PRODUCT_SHORT_NAME,
+        d.status as OPPO_CAMPAIGN_STATUS,
+        d.geo__c as OPPO_CAMPAIGN_GEO,
+        d.mkt_parent_campaign_name__c as OPPO_PARENT_CAMPAIGN_NAME,
+        d.vehicle__c as OPPO_CAMPAIGN_VEHICLE,
+        d.vehicle_detail__c as OPPO_CAMPAIGN_VEHICLE_DETAIL
+    from
+        {{ var('OPPORTUNITY_SFDC_RAW') }} a full
+        join {{ var('SFDC_SHARED.LEAD') }} L on L.CONVERTEDOPPORTUNITYID = a.id
+        left join {{ var('CONTACT') }} c on c.id = L.contact__c
+        left join {{ var('SFDC_SHARED.CAMPAIGN') }} d on d.id = a.campaignid
+        left join BSD_PUBLISH.SFDC_SHARED.PROSPECT_INTEREST__C e on L.id=e.lead__c
+    where
+        L.createddate>=$START_DATE 
+        OR L.LEAD_REOPENED_DATE__C >= $START_DATE 
+        OR L.CONVERTED_TO_LEAD_DATE__C >= $START_DATE 
+        OR a.createddate >= $START_DATE 
+        OR a.closedate >= $START_DATE 
+        OR E.CREATEDDATE >=$START_DATE 
+        OR L.ACCEPTED_DATE__C >= $START_DATE 
+        OR L.LASTTRANSFERDATE >= $START_DATE
+        OR L.LEAD_CLOSED_DATE__C >= $START_DATE
+       -- AND(E.RESPONSE_TYPE__C  NOT IN ('Tele Non-LeadGen','Tele NonLeadGen') OR E.RESPONSE_TYPE__C IS NULL )
+      
+),
+/* CONTACT_PHASE_SUPERSET as (
+    SELECT
+        A.*,
+        -- A.CUSTOMER_PHASE CUSTOMER_CREATION_PHASE,
+        B.CUSTOMER_PHASE,
+        B.CUSTOMER_PHASE_START_DATE,
+        B.CUSTOMER_PHASE_END_DATE,
+        B.START_FISCAL_YEAR_QUARTER AS CUSTOMER_START_FISCAL_YEAR_QUARTER
+    FROM
+        MARKETABLE_DATA A
+        LEFT JOIN (
+            SELECT
+                *,
+                RANK() OVER (
+                    PARTITION BY PARENT_CSN
+                    ORDER BY
+                        CUSTOMER_PHASE_START_DATE DESC
+                ) RN
+            FROM
+                EIO_PUBLISH.CUSTOMER_SHARED.CUSTOMER_PHASES QUALIFY RN = 1
+        ) B ON A.MARKETABILITY_ACCOUNT_CSN = B.PARENT_CSN
+), */
+MARKETABLE_SFDC as (
+    select
+        distinct *,
+        COALESCE(a.MARKETO_LEAD_ID, a.MARKETABILITY_SFDC_CONTACT_ID) COMBINED_CNTCT_ID,
+        COALESCE(B.MARKETO_LEAD_ID__C, B.LEAD_CONTACT__C) MQL_MDL_COMBINED_ID,
+    from
+        MARKETABLE_DATA a full
+        join SFDC_SUPERSET b on COALESCE(a.MARKETO_LEAD_ID, a.MARKETABILITY_SFDC_CONTACT_ID) = COALESCE(B.MARKETO_LEAD_ID__C, B.LEAD_CONTACT__C) -- check with contact_marketo_id__c for better coverage
+),
+final as (
+    select
+        SUB_ID_DOWNLOAD,
+        SUB_ID_ACTIVATION,
+        ACTIVATION_OXYGEN_ID,
+        TRAIL_DOWNLOAD_OXYGEN_ID,
+        IS_VALID_ACTIVATION,
+        IS_VALID_DOWNLOAD,
+        COUNTRY AS TRIAL_COUNTRY,
+        ACTIVATION_DATE,
+        ENTITLEMENT_START_DATE,
+        GEO AS TRIAL_GEO,
+        GDPR_FLAG AS TRIAL_GDPR_FLAG,
+        NAMED_ACCOUNT_GROUP AS TRIAL_NAMED_ACCOUNT_GROUP,
+       PRODUCT AS TRIAL_PRODUCT,
+       PRODUCT_FAMILY AS TRIAL_PRODUCT_FAMILY,
+       PRODUCT_INDUSTRY AS TRIAL_PRODUCT_INDUSTRY,
+        ms.*
+    from
+        MARKETABLE_SFDC ms -- left join  PROD.MPM.ID_STACK id
+        full join (SELECT SUB_ID_DOWNLOAD,SUB_ID_ACTIVATION,ACTIVATION_OXYGEN_ID,TRAIL_DOWNLOAD_OXYGEN_ID,IS_VALID_ACTIVATION,
+       IS_VALID_DOWNLOAD,COUNTRY,
+       ACTIVATION_DATE,
+       ENTITLEMENT_START_DATE,
+       GEO,
+       GDPR_FLAG,
+       NAMED_ACCOUNT_GROUP,
+       PRODUCT,
+       PRODUCT_FAMILY,
+       PRODUCT_INDUSTRY
+       FROM {{ ref('FFM_TRIALS_STAGE') }} --ACTIVATION_PRODUCT_LINE_CODE
+       WHERE IS_VALID_DOWNLOAD = TRUE
+       ) trials
+       on ms.OXYGEN_ID__C = trials.TRAIL_DOWNLOAD_OXYGEN_ID
+),
+
+id_stack as (
+    select
+        mcvisid,
+        REPLACE(oxygen_id, '"', '') as oxygen_id
+    from
+        (
+            select
+                distinct mcvisid,
+                value as oxygen_id
+            from
+                PROD.mpm.id_stack,
+                LATERAL FLATTEN(INPUT => OXYGEN_ID)
+        )
+),
+final_with_mcvisid as (
+    select
+        final.*,
+        id_stack.mcvisid as mcvisid_stack
+    from
+        final
+        left join id_stack on id_stack.oxygen_id = final.OXYGEN_ID__C
+),
+stores as (
+    select
+        cf.bsm_id,
+        cf.conv_mcvisid,
+        conv_purchase_product as store_conv_purchase_product,
+        conv_purchase_id as store_conv_purchase_id,
+        sum(conv_purchase_units) as store_conv_purchase_units,
+        sum(conv_purchase_price) as store_conv_purchase_price
+    from
+        PROD.mpm.conv_stack_fin_reconcilled cf
+    where
+        conv_conversion_type = 'eStorePurchase'
+        and conv_date > '2023-01-01'
+    group by
+        all
+)
+select
+    distinct a.MARKETO_LEAD_ID__C,
+    a.OXYGEN_ID__C,
+    -- a.mcvisid_stack as MCVISID,
+  --  a.OXYGEN_ID,
+    a.CORE_MARKETABILITY_SOURCE,
+    a.MARKETO_LEAD_ID,
+    a.MARKETABILITY_SFDC_CONTACT_ID,
+    a.LEAD_CONTACT__C,
+    a.MARKETABILITY_CONTACT_CREATED_DATE,
+    a.LEAD_ID,
+    a.LEAD_GUID,
+    a.LEAD_PROSPECT_ID,
+    a.LEAD_PRODUCT_INTEREST,
+    A.PROSPECT_INTEREST_ID,
+    A.PROSPECT_CREATE_DATE,
+    A.PROSPECT_INTEREST_NAME,
+    A.PI_STATUS,
+    A.PI_REASON,
+    A.PI_TYPE,
+    A.PI_TACTIC_ID,
+    A.PI_TACTIC_NAME,
+    A.PI_TACTIC_KEY,
+    A.PI_LEAD,
+    A.PI_TABLE_LAST_REFRESH_DATE,
+     a.OPPORTUNITY_ID,
+    a.OPPORTUNITY_GUID,
+    a.OPPORTUNITY_STAGE_NAME,
+    -- a.CONVERTEDOPPORTUNITYID,
+    -- a.CREATEDDATE,
+    -- a.CONVERTED_DATE__C,
+    a.MARKETABILITY_SFDC_ACCOUNT_ID,
+    a.MARKETABILITY_ACCOUNT_CSN,
+    csn.corporate_parent_account_csn as PARENT_CSN,
+    a.LEAD_CONVERTED_ACCOUNT_ID,
+    a.LEAD_CONVERTED_CONTACT_ID,
+    a.ACCOUNTID,
+    A.SUB_ID_DOWNLOAD,
+    A.SUB_ID_ACTIVATION,
+    A.ACTIVATION_OXYGEN_ID,
+    A.TRAIL_DOWNLOAD_OXYGEN_ID,
+    A.IS_VALID_ACTIVATION,
+    A.IS_VALID_DOWNLOAD,
+    A.TRIAL_GEO,
+    A.TRIAL_GDPR_FLAG,
+    A.TRIAL_NAMED_ACCOUNT_GROUP,A.TRIAL_COUNTRY,A.ACTIVATION_DATE,A.ENTITLEMENT_START_DATE,
+    A.TRIAL_PRODUCT,A.TRIAL_PRODUCT_FAMILY,A.TRIAL_PRODUCT_INDUSTRY,
+    a.MARKETABILITY_GEO,
+    a.MARKETABILITY_COUNTRY,
+    a.MARKETABILITY_REPORTABLE,
+    a.MARKETABILITY_AC_INDUSTRY_SEGMENT,
+    a.MARKETABILITY_SIC_INDUSTRY_SEGMENT,
+    a.MARKETABILITY_AC_AUDIENCE,
+    a.MARKETABILITY_END_USER_PERSONA,
+    a.MARKETABILITY_ACCOUNT_ADMIN_PERSONA,
+    a.MARKETABILITY_EXECUTIVE_PERSONA,
+    a.MARKETABILITY_VERY_SMALL_BUSINESS_PERSONA,
+    a.MARKETABILITY_SOLUTION_BUYER_PERSONA,
+    a.MARKETABILITY_ABSM_FLAG,
+    /* a.CUSTOMER_PHASE,
+    a.CUSTOMER_PHASE_START_DATE,
+    a.CUSTOMER_PHASE_END_DATE, */
+    a.LEAD_IS_CONVERTED,
+    a.LEAD_CAMPAIGN,
+    a.LEAD_CREATED_BY_NAME,
+    a.ACCEPTED_DATE AS LEAD_ACCEPTED_DATE,
+    LEAD_CREATED_DATE,
+    LEAD_CLOSED_DATE,
+    LEAD_CONVERTED_TO_LEAD_DATE,
+    LEAD_REOPENED_DATE,
+    LEAD_SALES_GEO,
+    LEAD_COUNTRY,
+    ORIGINAL_LEAD_GEO,
+    LEAD_TYPE,
+    LEAD_STATUS,
+    LEAD_STATUS_REASON,
+    LEAD_IS_DELETED,
+    LEAD_LAST_ACTIVITY_DATE,
+    LEAD_FIRST_ACTIVITY_START_DATE,
+    LEAD_COMPANY_ACCOUNT,
+    LEAD_CONVERTED_OPPORTUNITY_ID,
+    LEAD_FAST_TRACK_TYPE__C,
+    LEAD_TELEQUALIFIED__C,
+    LEAD_ACCOUNT__C,
+    LEAD_RESPONSE_TYPE__C,
+    LEAD_SOURCE__C,
+    LEAD_PRODUCTINFO__C,
+    LEAD_APRIMO_ACTIVITY_ID,
+    SFDC_LEAD_SOURCE,
+    LEAD_CONVERTED_DATE,
+    LEAD_TABLE_LAST_REFRESH_DATE,
+    LEAD_PARTNER_ACCOUNT,
+    LEAD_OWNER_ID,
+    LEAD_CREATED_BY_ID,
+    LEAD_LAST_MODIFIED_DATE,
+    LEAD_RECEIVED_DATE,
+    LEAD_DELIVERED_TO_SALES_DATE,
+    LEAD_ACCOUNT_CSN,
+    LEAD_SALES_COUNTRY,
+    CUSTOMER_INITIATIVES__C,
+    a.LEAD_SCORE2__C,
+    a.LEAD_MI_SCORE__C,
+    LEAD_MARKETO_LEAD_ID__C,
+    a.OPPORTUNIY_ACV,
+    a.OPPO_CAMPAGIN_ID,
+    a.OPPO_ALLOCADIA_ID,
+    a.OPPO_CAMPIAGN_NAME,
+    a.OPPO_CAMPAIGN_TYPE__C,
+    a.OPPO_CAMPAIGN_TYPE,
+    a.OPPO_CAMPAIGN_TYPE_DETAIL,
+    a.OPPO_CAMPAIGN_TARGET_SALES_CHANNEL,
+    a.OPPO_CAMPAIGN_CUSTOMER_JOURNEY,
+    a.OPPO_CAMPAIGN_CATEGORY,
+    a.OPPO_CAMPAIGN_GLOBAL_GEO,
+    a.OPPO_CAMPAIGN_GLOBAL_CAMPAIGN,
+    a.OPPO_CAMPAIGN_PROGRAM_PRODUCT_NAME,
+    a.OPPO_CAMPAIGN_PROGRAM_PRODUCT_SHORT_NAME,
+    a.OPPO_CAMPAIGN_STATUS,
+    a.OPPO_CAMPAIGN_GEO,
+    a.OPPO_PARENT_CAMPAIGN_NAME,
+    a.OPPO_CAMPAIGN_VEHICLE,
+    a.OPPO_CAMPAIGN_VEHICLE_DETAIL,
+from
+    final_with_mcvisid a
+    left join PROD.core_datasets.accounts_with_corporate_parents csn on a.MARKETABILITY_ACCOUNT_CSN = csn.account_csn

@@ -1,0 +1,632 @@
+version: 2
+
+sources:
+  - name: FINMART_PUBLISH_PRIVATE
+    database: EDH_FINANCE
+    schema: FINMART_PUBLISH_PRIVATE
+    tables:
+      - name: ACS_FINANCE_RENEWALS
+        description: "ACS source table from EDH_FINANCE.FINMART_PUBLISH_PRIVATE.ACS_FINANCE_RENEWALS"
+      - name: VW_FINMART
+        description: "Finmart data from EDH_FINANCE.FINMART_PUBLISH_PRIVATE.VW_FINMART"
+
+  - name: FINMART_PRIVATE
+    database: BSD_PUBLISH
+    schema: FINMART_PRIVATE
+    tables:
+      - name: CVC_FINMART
+        description: "CVC Finmart data from BSD_PUBLISH.FINMART_PRIVATE.CVC_FINMART"
+
+  - name: SFDC_SHARED
+    database: BSD_PUBLISH
+    schema: SFDC_SHARED
+    tables:
+      - name: ORDER__C
+        description: "Order data from BSD_PUBLISH.SFDC_SHARED.ORDER__C"
+      - name: CONTRACTLINEITEM
+      - name: SERVICECONTRACT
+      - name: ACCOUNT
+      - name: RECORDTYPE
+
+  - name: ENTITLEMENT_PUBLIC
+    database: ADP_PUBLISH
+    schema: ENTITLEMENT_PUBLIC
+    tables:
+      - name: SUBSCRIPTION_PELICAN
+        description: "Subscription Pelican data from ADP_PUBLISH.ENTITLEMENT_PUBLIC.SUBSCRIPTION_PELICAN"
+      - name: SUBSCRIPTION_AUM
+      - name: ASSIGNMENT_ENTITLEMENT_POOL
+      - name: USER_ASSIGNMENT_AUM
+      - name: USER_AUM
+      - name: ASSIGNMENT_ENTITLEMENT_POOL_SNAPSHOT_deprecated_DNU
+
+  - name: ACCOUNT_OPTIMIZED
+    database: ADP_PUBLISH
+    schema: ACCOUNT_OPTIMIZED
+    tables:
+      - name: ACCOUNT_EDP_OPTIMIZED
+        description: "Account EDP Optimized data from ADP_PUBLISH.ACCOUNT_OPTIMIZED.ACCOUNT_EDP_OPTIMIZED"
+      - name: TRANSACTIONAL_CSN_MAPPING_OPTIMIZED
+        description: "Transactional CSN Mapping data from ADP_PUBLISH.ACCOUNT_OPTIMIZED.TRANSACTIONAL_CSN_MAPPING_OPTIMIZED"
+
+  - name: EDM_PUBLIC
+    database: EDM_PUBLISH
+    schema: EDM_PUBLIC
+    tables:
+      - name: VICTIM_SURVIVOR_MAPPING
+        description: "Victim Survivor Mapping data from EDM_PUBLISH.EDM_PUBLIC.VICTIM_SURVIVOR_MAPPING"
+      - name: ORGANIZATION_ACCOUNT_MAPPING
+      - name: ORGANIZATION_ENRICHMENT
+      - name: LEGAL_HIERARCHY
+  
+  - name: CORPORATE_FINMART_PUBLISH_PRIVATE
+    database: EDH_FINANCE
+    schema: CORPORATE_FINMART_PUBLISH_PRIVATE
+    tables:
+      - name: FINANCE_CURATED
+        description: "Finance Curated data from EDH_FINANCE.CORPORATE_FINMART_PUBLISH_PRIVATE.FINANCE_CURATED"
+
+  - name: core_enterprise_data_limited
+    database: ADP_WORKSPACES
+    schema: CORE_ENTERPRISE_DATA_LIMITED
+    tables:
+      - name: PERSON
+
+  - name: core_datasets
+    database: PROD
+    schema: CORE_DATASETS
+    tables:
+      - name: MARKETABILITY_SNAPSHOT
+      - name: VW_MARKETABILITY_WITH_NAG_VALUE
+      - name: ACCOUNTS_WITH_CORPORATE_PARENTS
+
+  - name: mpm
+    database: PROD
+    schema: MPM
+    tables:
+      - name: ID_STACK
+      - name: ENGAGEMENT_STACK
+      - name: BSM_ACCOUNT_ID_STACK
+
+  - name: lookups
+    database: RAW
+    schema: LOOKUPS
+    tables:
+      - name: DIM_ENGAGEMENT_CHANNEL_GROUP
+      - name: GDG_MEANINGFUL_EVENTS
+      - name: GDG_NAG_TO_SEGMENT_LOOKUP
+      - name: GDG_LOOKUP_SPARK_CONTROL
+      - name: DIM_FUZZYSEARCH_COUNTRY
+        description: "Country mapping lookup. Replaces var('LOOKUP_COUNTRY_MAPPING') = RAW.LOOKUPS.DIM_FUZZYSEARCH_COUNTRY"
+      - name: GDG_FY22_Q1_MANUAL_LOAD_DATA
+      - name: GDG_FY22Q1_WITH_D0430_MARKETABILITY
+      - name: GDG_MARKETABILITY_ACCOUNT_BUCKETS
+      - name: KYA_SR_OPPO_CIB_GROUPS_LOOKUP_FOR_FY23
+      - name: KYA_SR_OPPO_EBA_GROUPS_LOOKUP_FOR_FY23
+      - name: ALPHA_CSN_ADSK_KEYWORD_LOOKUP
+      - name: ALPHA_CSN_JOURNEY_LOOKUP
+      - name: KYA_EVENT_CHANNEL_FLAGS
+      - name: KYA_DOT_COM_EVENT_TYPES
+      - name: KYA_LOOKUP_FOR_6SENSE_TO_HG_INISHGTS_V2
+      - name: KYA_PRODUCT_INSIGHTS_LOOKUP
+      - name: ALPHA_CSN_EVENT_FLAGS
+      - name: MPM_REVISED_THRESHOLDS_WITH_MI_MS_SAME_SCORES
+      - name: ALPHA_ACCOUNT_POTENTIAL_LOOKUP
+      - name: KYA_FY23_SR_OPPOS_AND_INITITATIVES_LOOKUP
+      - name: LOOKUP_MARKETING_TACTIC_ORGANIZATION
+      - name: RESOLVED_ALLOCADIA_LOOKUP
+      - name: ALLOCADIA_REUSED_SR_GOALS
+      - name: ALLOCADIA_REUSED_INITIATIVES
+      - name: ALLOCADIA_REUSED_PARENT_CAMPAIGNS
+
+  - name: adp
+    database: RAW
+    schema: ADP
+    tables:
+      - name: ACCOUNT_SFDC_RAW
+        description: "Salesforce Account raw. Replaces var('ACCOUNT_RAW') = RAW.ADP.ACCOUNT_SFDC_RAW"
+      - name: CONTRACT_SFDC_RAW
+        description: "Salesforce Contract raw. Replaces var('ADP.CONTRACT_SFDC_RAW') = RAW.ADP.CONTRACT_SFDC_RAW"
+      - name: PORTFOLIO_MEMBER__C_SFDC_RAW
+      - name: CONTACT_SFDC_RAW
+      - name: CAMPAIGN_SFDC_RAW
+      - name: CAMPAIGN_REQUEST_TASK__C_SFDC_RAW
+      - name: LEAD_SFDC_RAW
+      - name: CURRENCYTYPE_SFDC_RAW
+      - name: OPPORTUNITY_SFDC_RAW
+      - name: OPPORTUNITYLINEITEM_SFDC_RAW
+      - name: PRODUCT2_SFDC_RAW
+      - name: RECORDTYPE_SFDC_RAW
+      - name: CASE_SFDC_RAW
+
+  - name: mpm_exchange
+    database: PROD
+    schema: MPM_EXCHANGE
+    tables:
+      - name: ALLOCADIA_LINEITEM_MASTER
+      - name: EVTSCORE_MODEL_PARAMETERS
+      - name: EVTSCORE
+      - name: EVT_SCORE_SNAPSHOT
+      - name: EVT_SCORE_SNAPSHOT_V2
+
+  - name: mpm_reporting
+    database: PROD
+    schema: MPM_REPORTING
+    tables:
+      - name: DATE_DIM_VW
+      - name: ODM_COUNTRY_LIST
+      - name: DIM_OWNERID_TO_SALESREP_MAPPING
+      - name: DATE_DIM
+
+  - name: common_reference_data_optimized
+    database: ADP_PUBLISH
+    schema: COMMON_REFERENCE_DATA_OPTIMIZED
+    tables:
+      - name: DATE_TIME_HIERARCHY
+        description: "Date time hierarchy. Replaces var('COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY') = ADP_PUBLISH.COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY"
+      - name: COUNTRY_EDP
+        description: "Country reference data. Replaces var('COUNTRY_EDP') = ADP_PUBLISH.COMMON_REFERENCE_DATA_OPTIMIZED.COUNTRY_EDP"
+
+  - name: marketo
+    database: RAW
+    schema: MARKETO
+    tables:
+      - name: LEAD_MARKETO_LATEST
+
+  - name: common_reference_data_shared
+    database: ADP_WORKSPACES
+    schema: CORE_ENTERPRISE_DATA_SHARED
+    tables:
+      - name: PERSON_MAPPING
+
+  - name: alpha_csn
+    database: PROD
+    schema: ALPHA_CSN
+    tables:
+      - name: WEIGHTED_EVTSCORES
+
+  - name: sixsense
+    database: RAW
+    schema: SIXSENSE
+    tables:
+      - name: LOOKUP
+
+  - name: edm_reference
+    database: EDM_PUBLISH
+    schema: EDM_REFERENCE
+    tables:
+      - name: INDUSTRY_REFERENCE
+
+  - name: entitlement_optimized
+    database: ADP_PUBLISH
+    schema: ENTITLEMENT_OPTIMIZED
+    tables:
+      - name: ENTITLEMENT_EDP_OPTIMIZED
+
+  - name: kya
+    database: PROD
+    schema: KYA
+    tables:
+      - name: ACCOUNT_HIERARCHY
+      - name: AP_LOOKUP_FOR_TP_TO_ABSM_TERRITORY_PARENT_ACCOUNTS
+
+  - name: product_lookup
+    database: PROD
+    schema: PRODUCT_LOOKUP
+    tables:
+      - name: PRODUCT_LOOKUP_VW
+
+  - name: polaris
+    database: PROD
+    schema: POLARIS
+    tables:
+      - name: POLARIS_PHASE_TIMELINE_FACT
+
+  - name: allocadia
+    database: RAW
+    schema: ALLOCADIA
+    tables:
+      - name: ITEMMEASURES_RAW
+      - name: LINEITEM_RAW
+      - name: FOLDER_BUDGET_RAW
+
+  - name: edh_shared
+    database: EDH_PUBLISH
+    schema: EDH_SHARED
+    tables:
+      - name: SURVEY_RESPONSE_CED
+      - name: LEAD_CED
+      - name: OPPORTUNITY_CED
+      - name: OFFERING
+
+  - name: engagement_shared
+    database: EIO_PUBLISH
+    schema: ENGAGEMENT_SHARED
+    tables:
+      - name: CASES_SURVEY_RESPONSE
+
+  - name: CUSTOMER_SUCCESS_OPTIMIZED
+    database: ADP_PUBLISH
+    schema: CUSTOMER_SUCCESS_OPTIMIZED
+    tables:
+      - name: NPS_COMBINED_OPTIMIZED
+      - name: GPS_SURVEY_RESPONSES_OPTIMIZED
+  
+  - name: markettoorder_public
+    database: ADP_PUBLISH
+    schema: MARKETTOORDER_PUBLIC
+    tables:
+      - name: LEADS_MARKETO
+      - name: ACTIVITY_MARKETO_V2
+
+  - name: CUSTOMER_LIFECYCLE
+    database: BSM_ETL
+    schema: CUSTOMER_LIFECYCLE
+    tables:
+      - name: PRODUCT_USAGE_FACT
+
+  - name: PROD_CUSTOMER_LIFECYCLE
+    database: PROD
+    schema: CUSTOMER_LIFECYCLE
+    tables:
+      - name: MAU_ROLLING_FOUR_WEEKS
+      - name: MONTHLY_CUSTOMER_ACTIVE_USAGE
+
+  - name: LICENSE_AUTHORIZATION_USAGE_OPTIMIZED
+    database: ADP_PUBLISH
+    schema: LICENSE_AUTHORIZATION_USAGE_OPTIMIZED
+    tables:
+      - name: SUBSCRIPTION_AUTHORIZATION_CONFORMED
+
+  - name: HG_INSIGHTS
+    database: RAW
+    schema: HG_INSIGHTS
+    tables:
+      - name: HGINSIGHGTS_IV_RAW
+
+  - name: INSTALL_BASE
+    database: PROD
+    schema: INSTALL_BASE
+    tables:
+      - name: COMMERCIAL_ACCOUNT
+      - name: COMMERCIAL_ENTITLEMENT
+
+  - name: USAGE_SHARED
+    database: EIO_PUBLISH
+    schema: USAGE_SHARED
+    tables:
+      - name: TFLEX_USAGE_DD_FCT
+
+  - name: SALESFORCE
+    database: RAW
+    schema: SALESFORCE
+    tables:
+      - name: USER
+        description: "Salesforce User table. Replaces var('SALESFORCE.USER') = RAW.SALESFORCE.USER"
+      - name: USER_ROLE
+      - name: GROUP
+        identifier: GROUP
+        quoting:
+          identifier: true
+      - name: PRODUCT_2
+
+  - name: PURCHASE_SHARED
+    database: EIO_PUBLISH
+    schema: PURCHASE_SHARED
+    tables:
+      - name: BMT_FINANCE_METRICS
+
+  - name: ALPHA_RAW
+    database: BSM_SANDBOX
+    schema: ALPHA_RAW
+    tables:
+      - name: MONTHLY_ACTIVE_USERS_RAW
+  
+  - name: DEMO_DELETE
+    database: RAW
+    schema: DEMO_DELETE
+    tables:
+      - name: KYA_EVENT_TYPE_DESCRIPTIONS
+
+  - name: LUMOS
+    database: RAW
+    schema: LUMOS
+    tables:
+      - name: B3D_TARGET_SPLIT
+
+  - name: SECURE_REVMART
+    database: RAW
+    schema: SECURE_REVMART
+    tables:
+      - name: REVMART
+        description: "RevMart revenue data. Replaces var('REVMART') = RAW.SECURE_REVMART.REVMART"
+
+  - name: PROD_SIXSENSE
+    database: PROD
+    schema: SIXSENSE
+    tables:
+      - name: INTENT_VW
+
+  - name: AWS_S3
+    database: RAW
+    schema: AWS_S3
+    tables:
+      - name: WEB_ANALYTICS_ADOBE_ENRICHED_VW
+
+  - name: DEC_ANALYTICS_SHARED
+    database: ADP_WORKSPACES
+    schema: DEC_ANALYTICS_SHARED
+    tables:
+      - name: ADOBE_CORE_DEC_SITE_SEGMENTS
+        description: "DEC Site Segments data from ADP_WORKSPACES.DEC_ANALYTICS_SHARED.ADOBE_CORE_DEC_SITE_SEGMENTS"
+
+  - name: FF_CAMPAIGN_REPORTING
+    database: PROD
+    schema: CAMPAIGN_REPORTING_FACT
+    tables:
+      - name: FACT_FF_CAMPAIGN_REPORTING
+        description: "FF_CAMPAIGN_REPORTING data from PROD.CAMPAIGN_REPORTING_FACT.FACT_FF_CAMPAIGN_REPORTING"
+
+  - name: PROD_MPM
+    database: PROD
+    schema: MPM
+    tables:
+      - name: ENGAGEMENT_STACK
+        description: "Engagement Stack data from PROD.MPM.ENGAGEMENT_STACK"
+      - name: BSM_ACCOUNT_ID_STACK
+        description: "BSM Account ID Stack data from PROD.MPM.BSM_ACCOUNT_ID_STACK"  
+        
+  - name: marketo_v2
+    database: RAW
+    schema: MARKETTOORDER_PUBLIC
+    tables:
+      - name: ACTIVITY_MARKETO_V2
+
+  # ============================================================
+  # MDP 360i Sources — added to replace var() table references
+  # in models/bronze/ and models/silver/ and models/gold/
+  # ============================================================
+
+  - name: MDF_ETL
+    database: BSM_ETL
+    schema: MDF
+    description: "BSM_ETL.MDF — raw SFTP-ingested staging tables for the MDP 360i pipeline"
+    tables:
+      - name: MDP_ACTIVITY_QUESTIONS
+        description: >
+          Activity question responses (SFTP file: ActivityQuestions_date.csv).
+          Replaces: var('MDF.MDP_ACTIVITY_QUESTIONS') = BSM_ETL.MDF.MDP_ACTIVITY_QUESTIONS
+      - name: MDP_PLANCLAIMHEADER
+        description: >
+          Plan and claim header rows (SFTP file: PlanClaimHeader_date.csv).
+          Replaces: var('MDF.MDP_PLANCLAIMHEADER') = BSM_ETL.MDF.MDP_PLANCLAIMHEADER
+      - name: MDP_CAMPAIGNS
+        description: >
+          Campaign rows (SFTP file: Campaigns_date.csv).
+          Replaces: var('MDF.MDP_CAMPAIGNS') = BSM_ETL.MDF.MDP_CAMPAIGNS
+
+  - name: MDF_RAW
+    database: RAW
+    schema: MDF
+    description: "RAW.MDF — activity type reference / lookup data"
+    tables:
+      - name: MDP_ACTIVITY_TYPE
+        description: >
+          Activity type mapping table used for renaming ACTIVITY_TYPE in the gold layer.
+          Replaces: var('MDF.MDP_ACTIVITY_TYPE') = RAW.MDF.MDP_ACTIVITY_TYPE
+
+  - name: MDF_LOOKUPS
+    database: RAW
+    schema: MDF_LOOKUPS
+    description: "RAW.MDF_LOOKUPS — partner, budget, and GTM reference data for MDP models"
+    tables:
+      - name: GTM_TIERS
+        description: >
+          Country-to-GTM-tier mapping (A/B/C/D).
+          Replaces: var('MDF_LOOKUPS.GTM_TIERS') = RAW.MDF_LOOKUPS.GTM_TIERS
+      - name: GLOBAL_MDF_BUDGET
+        description: >
+          Historical global MDF budget data (used for pre-FY21Q2 budget rows).
+          Replaces: var('MDF_LOOKUPS.GLOBAL_MDF_BUDGET') = RAW.MDF_LOOKUPS.GLOBAL_MDF_BUDGET
+      - name: GLOBAL_MDF_BUDGET_CURRENT
+        description: >
+          Current global MDF budget data.
+          Replaces: var('MDF_LOOKUPS.GLOBAL_MDF_BUDGET_CURRENT') = RAW.MDF_LOOKUPS.GLOBAL_MDF_BUDGET_CURRENT
+      - name: MDP_CMM_PARTNER_LIST
+        description: >
+          Named CMM partner list used for PMM assignment and focus partner flag.
+          Replaces: var('MDF_LOOKUPS.MDP_CMM_PARTNER_LIST') = RAW.MDF_LOOKUPS.MDP_CMM_PARTNER_LIST
+
+  - name: QV_LEGACY
+    database: RAW
+    schema: QV_LEGACY
+    description: "RAW.QV_LEGACY — historical QlikView legacy spend data"
+    tables:
+      - name: CCI_REPORT
+        description: >
+          Legacy CCI (Channel Campaign Intelligence) report from QlikView.
+          Replaces: var('QV_LEGACY.CCI_REPORT') = RAW.QV_LEGACY.CCI_REPORT
+      - name: MDF_ROI_ROLL_UP
+        description: >
+          Legacy MDF ROI roll-up report from QlikView.
+          Replaces: var('QV_LEGACY.MDF_ROI_ROLL_UP') = RAW.QV_LEGACY.MDF_ROI_ROLL_UP
+
+  - name: JMP_MDF_SFTP
+    database: RAW
+    schema: JMP_MDF_SFTP
+    description: "RAW.JMP_MDF_SFTP — MDP SFTP-ingested partner reference files"
+    tables:
+      - name: MDP_NAMED_MQL_WIN_CMC
+        description: >
+          Named partner MQL validated, Win count, and CMC% data ingested via SFTP.
+          Replaces: var('JMP_MDF_SFTP.MDP_NAMED_MQL_WIN_CMC') = RAW.JMP_MDF_SFTP.MDP_NAMED_MQL_WIN_CMC
+
+  # --- Sprout Social raw data (RAW.SPROUT) ---
+  - name: sprout_raw
+    database: RAW
+    schema: SPROUT
+    description: "Sprout Social API ingestion raw tables (prod)"
+    tables:
+      - name: CUSTOMER_DATA
+      - name: CUSTOMER_GROUP_DATA
+      - name: CUSTOMER_TAG_DATA
+      - name: CUSTOMER_USER_DATA
+      - name: CUSTOMER_TOPICS_DATA
+      - name: TWITTER_POST_DATA
+      - name: FACEBOOK_POST_DATA
+      - name: INSTAGRAM_POST_DATA
+      - name: LINKEDIN_POST_DATA
+      - name: YOUTUBE_POST_DATA
+      - name: TIKTOK_POST_DATA
+      - name: TWITTER_PROFILE_DATA
+      - name: FACEBOOK_PROFILE_DATA
+      - name: INSTAGRAM_PROFILE_DATA
+      - name: LINKEDIN_PROFILE_DATA
+      - name: YOUTUBE_PROFILE_DATA
+      - name: TIKTOK_PROFILE_DATA
+
+  # --- Sprout Social raw data (DEV.SPROUT) — dev/test environment ---
+  - name: sprout_raw_dev
+    database: DEV
+    schema: SPROUT
+    description: "Sprout Social API ingestion raw tables (dev)"
+    tables:
+      - name: CUSTOMER_DATA
+      - name: CUSTOMER_GROUP_DATA
+      - name: CUSTOMER_TAG_DATA
+      - name: CUSTOMER_USER_DATA
+      - name: CUSTOMER_TOPICS_DATA
+      - name: TWITTER_POST_DATA
+      - name: FACEBOOK_POST_DATA
+      - name: INSTAGRAM_POST_DATA
+      - name: LINKEDIN_POST_DATA
+      - name: YOUTUBE_POST_DATA
+      - name: TIKTOK_POST_DATA
+      - name: TWITTER_PROFILE_DATA
+      - name: FACEBOOK_PROFILE_DATA
+      - name: INSTAGRAM_PROFILE_DATA
+      - name: LINKEDIN_PROFILE_DATA
+      - name: YOUTUBE_PROFILE_DATA
+      - name: TIKTOK_PROFILE_DATA
+
+  # --- Common reference data ---
+  - name: common_reference_data_optimized
+    database: ADP_PUBLISH
+    schema: COMMON_REFERENCE_DATA_OPTIMIZED
+    description: "Shared date/country reference. Replaces var('COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY')"
+    tables:
+      - name: DATE_TIME_HIERARCHY
+        description: "Date time hierarchy. Replaces var('COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY')"
+      - name: COUNTRY_EDP
+        description: "Country reference. Replaces var('COUNTRY_EDP')"
+
+  # --- Lookups ---
+  - name: lookups
+    database: RAW
+    schema: LOOKUPS
+    tables:
+      - name: DIM_FUZZYSEARCH_COUNTRY
+        description: "Country mapping. Replaces var('LOOKUP_COUNTRY_MAPPING')"
+
+  # --- ADP raw SFDC ---
+  - name: adp
+    database: RAW
+    schema: ADP
+    tables:
+      - name: ACCOUNT_SFDC_RAW
+        description: "Salesforce Account raw. Replaces var('ACCOUNT_RAW')"
+      - name: CONTRACT_SFDC_RAW
+      - name: LEAD_SFDC_RAW
+      - name: CONTACT_SFDC_RAW
+      - name: OPPORTUNITY_SFDC_RAW
+      - name: OPPORTUNITYLINEITEM_SFDC_RAW
+      - name: CURRENCYTYPE_SFDC_RAW
+      - name: PRODUCT2_SFDC_RAW
+      - name: RECORDTYPE_SFDC_RAW
+      - name: CAMPAIGN_SFDC_RAW
+      - name: CAMPAIGN_REQUEST_TASK__C_SFDC_RAW
+
+  # --- Finance / Finmart ---
+  - name: FINMART_PUBLISH_PRIVATE
+    database: EDH_FINANCE
+    schema: FINMART_PUBLISH_PRIVATE
+    tables:
+      - name: VW_FINMART
+        description: "Finmart data. Replaces var('EDH_FINMART_PRIVATE_DATA')"
+      - name: ACS_FINANCE_RENEWALS
+
+  - name: FINMART_PRIVATE
+    database: BSD_PUBLISH
+    schema: FINMART_PRIVATE
+    tables:
+      - name: CVC_FINMART
+        description: "CVC Finmart. Replaces var('FINMART_PRIVATE_DATA')"
+
+  # --- SFDC Shared ---
+  - name: SFDC_SHARED
+    database: BSD_PUBLISH
+    schema: SFDC_SHARED
+    tables:
+      - name: ORDER__C
+      - name: CONTRACTLINEITEM
+      - name: SERVICECONTRACT
+      - name: ACCOUNT
+      - name: RECORDTYPE
+
+  # --- Entitlement / ADP Publish ---
+  - name: ENTITLEMENT_PUBLIC
+    database: ADP_PUBLISH
+    schema: ENTITLEMENT_PUBLIC
+    tables:
+      - name: SUBSCRIPTION_PELICAN
+        description: "Replaces var('SUBSCRIPTION_PELICAN')"
+      - name: SUBSCRIPTION_AUM
+        description: "Replaces var('SUBSCRIPTION_AUM')"
+      - name: USER_ASSIGNMENT_AUM
+        description: "Replaces var('USER_ASSIGNMENT_AUM')"
+      - name: USER_AUM
+        description: "Replaces var('USER_AUM')"
+      - name: ASSIGNMENT_ENTITLEMENT_POOL
+
+  # --- Purchase / Usage ---
+  - name: PURCHASE_SHARED
+    database: EIO_PUBLISH
+    schema: PURCHASE_SHARED
+    tables:
+      - name: BMT_FINANCE_METRICS
+        description: "BMT Finance Metrics. Replaces var('BMT_FINANCE_METRICS')"
+
+  - name: USAGE_SHARED
+    database: EIO_PUBLISH
+    schema: USAGE_SHARED
+    tables:
+      - name: TFLEX_USAGE_DD_FCT
+        description: "Replaces var('TFLEX_USAGE_DD_FCT')"
+
+  # --- Customer Success / NPS ---
+  - name: CUSTOMER_SUCCESS_OPTIMIZED
+    database: ADP_PUBLISH
+    schema: CUSTOMER_SUCCESS_OPTIMIZED
+    tables:
+      - name: NPS_COMBINED_OPTIMIZED
+      - name: GPS_SURVEY_RESPONSES_OPTIMIZED
+
+  # --- EDM / EDH shared ---
+  - name: EDM_PUBLIC
+    database: EDM_PUBLISH
+    schema: EDM_PUBLIC
+    tables:
+      - name: ORGANIZATION_ENRICHMENT
+        description: "Replaces var('ORGANIZATION_ENRICHMENT')"
+      - name: ORGANIZATION_ACCOUNT_MAPPING
+      - name: LEGAL_HIERARCHY
+      - name: VICTIM_SURVIVOR_MAPPING
+
+  - name: edh_shared
+    database: EDH_PUBLISH
+    schema: EDH_SHARED
+    tables:
+      - name: SURVEY_RESPONSE_CED
+      - name: LEAD_CED
+      - name: OPPORTUNITY_CED
+      - name: OFFERING

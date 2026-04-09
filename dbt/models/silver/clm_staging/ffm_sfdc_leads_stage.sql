@@ -1,0 +1,744 @@
+-- =============================================================================
+-- LAYER  : Silver — Staging
+-- MODEL  : FFM_SFDC_LEADS_STAGE (CLM / FFM pipeline stage)
+-- NOTES  : Intermediate staging model; feeds gold fact tables
+-- =============================================================================
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+{# Set the right tag #}
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+{# Set the configuration #}
+{{
+    config(
+        materialized='table'
+    )
+}}
+
+{# Set Date variables #}
+{{
+  config(
+    pre_hook = [
+        "SET START_DATE = (SELECT CALENDAR_DATE FROM ADP_PUBLISH.COMMON_REFERENCE_DATA_OPTIMIZED.DATE_TIME_HIERARCHY WHERE FISCAL_QUARTER_VS_CURRENT_NUMBER = -12 AND FISCAL_QUARTER_DAY_NUMBER = 1);"
+    ]
+  )
+}}
+
+{# Set the post pipeline configuration #}
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_QA"
+    ]
+  )
+}}
+
+WITH USERS AS (
+    SELECT
+        u.ID AS USER_ID,
+        u.NAME AS FULL_NAME,
+        u.SALES_ROLE_C AS SALES_ROLE,
+        ur.NAME AS ROLE_TEAM,
+        u.SALES_INDUSTRY_C AS SALES_INDUSTRY,
+        u.SALES_GEO_C AS SALES_GEO,
+        u.SALES_COUNTRY_C AS SALES_COUNTRY,
+        u.ACCOUNT_ID,
+        u.MANAGER_ID,
+    FROM
+        {{ var('SALESFORCE.USER') }} u
+        LEFT JOIN {{ var('SALESFORCE.USER_ROLE') }} ur ON u.USER_ROLE_ID = ur.id
+),
+GROUPS AS (
+    SELECT
+        ID AS GROUP_ID,
+        NAME AS GROUP_NAME,
+        TYPE AS SALES_ROLE,
+        NULL AS ROLE_TEAM,
+        NULL AS SALES_INDUSTRY,
+        NULL AS SALES_GEO,
+        NULL AS SALES_COUNTRY,
+        NULL AS ACCOUNT_ID,
+        NULL AS MANAGER_ID,
+    FROM
+        {{ var('SALESFORCE.GROUP') }}
+),
+USER_DETAILS AS (
+    SELECT
+        USER_ID,
+        FULL_NAME,
+        SALES_ROLE,
+        ROLE_TEAM,
+        SALES_INDUSTRY,
+        SALES_GEO,
+        SALES_COUNTRY,
+        ACCOUNT_ID,
+        MANAGER_ID
+    FROM
+        USERS
+    UNION
+    SELECT
+        GROUP_ID,
+        GROUP_NAME,
+        SALES_ROLE,
+        ROLE_TEAM,
+        SALES_INDUSTRY,
+        SALES_GEO,
+        SALES_COUNTRY,
+        ACCOUNT_ID,
+        MANAGER_ID
+    FROM
+        GROUPS
+),
+USER_ACCOUNT AS (
+    SELECT
+        ud.USER_ID,
+        ud.FULL_NAME,
+        ud.SALES_ROLE,
+        ud.ROLE_TEAM,
+        ud.SALES_INDUSTRY,
+        ud.SALES_GEO,
+        ud.SALES_COUNTRY,
+        ud.ACCOUNT_ID,
+        ud.MANAGER_ID,
+        um.NAME AS LEAD_OWNER_MANAGER,
+        a.PARTNER_TYPE__C AS PARTNER_TYPE,
+        a.VENDOR_TYPE__C AS VENDOR_TYPE,
+        a.TYPE AS ACCOUNT_TYPE,
+        a.NAME AS ACCOUNT_NAME
+    FROM
+        USER_DETAILS ud
+        LEFT JOIN {{ var('SALESFORCE.USER') }} um ON ud.MANAGER_ID = um.ID
+        LEFT JOIN {{ var('ACCOUNT_SFDC_RAW') }} a ON ud.ACCOUNT_ID = a.ID
+),
+PRODUCT_CD AS (
+    SELECT
+        TRIM(NULLIF(PRODUCT, 'N/A')) AS PRODUCT,
+        TRIM(PRODUCT_CODE) AS PRODUCT_CODE,
+        TRIM(NULLIF(SOLUTION_DIVISION, 'N/A')) AS PRODUCT_INDUSTRY,
+        TRIM(NULLIF(PRODUCT_GROUPING, 'N/A')) AS PRODUCT_FAMILY,
+        ROW_NUMBER() OVER(
+            PARTITION BY PRODUCT_CODE
+            ORDER BY
+                UPDATED_DATE DESC NULLS LAST
+        ) AS RN
+    FROM
+        {{ var('LOOKUPS.MPM_PRODUCT_LOOKUP') }}
+    QUALIFY RN = 1
+),
+PRODUCT_NM AS (
+    SELECT
+        TRIM(NULLIF(PRODUCT, 'N/A')) AS PRODUCT,
+        TRIM(NULLIF(SOLUTION_DIVISION, 'N/A')) AS PRODUCT_INDUSTRY,
+        TRIM(NULLIF(PRODUCT_GROUPING, 'N/A')) AS PRODUCT_FAMILY,
+        ROW_NUMBER() OVER(
+            PARTITION BY PRODUCT
+            ORDER BY
+                UPDATED_DATE DESC NULLS LAST
+        ) AS RN
+    FROM
+        {{ var('LOOKUPS.MPM_PRODUCT_LOOKUP') }}
+    QUALIFY RN = 1
+),
+TACTIC_CAMPAIGN AS (
+    SELECT
+        DISTINCT LINE_ITEM_ID,
+        CHILD_CAMPAIGN_NAME,
+        PARENT_CAMPAIGN_NAME,
+        CAMPAIGN_INDUSTRY,
+        VEHICLE_DETAIL
+    FROM
+        {{ var('ALLOCADIA_LINEITEM_MASTER') }}
+    WHERE
+        ACTIVE_TO_DATE IS NULL
+),
+DATE_HIERARCHY AS (
+    SELECT
+        DISTINCT DATE_KEY,
+        WEEK_NUMBER_FISCAL_QUARTER AS FYQUARTER_WEEK,
+        MONTH_NUMBER_IN_FISCAL_YEAR AS FYMONTH,
+        FISCAL_YEAR_AND_FISCAL_QUARTER_NAME AS FYQUARTER,
+        FISCAL_YEAR_NAME AS FYYEAR
+    FROM
+        {{ ref('LOOKUP_FINANCE_CALENDAR') }}
+    WHERE
+        DATE_KEY >= $START_DATE
+),
+LEADS_RAW AS (
+    SELECT *
+    FROM {{ ref('FFM_MARKETING') }} L
+    WHERE LEAD_ID IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER(PARTITION BY LEAD_ID ORDER BY LEAD_LAST_MODIFIED_DATE DESC NULLS LAST) = 1
+),
+LEADS_SUBSET AS (
+    SELECT
+        L.LEAD_ID,
+        L.LEAD_GUID AS LEAD_SFDC_GUID,
+        L.LEAD_CREATED_DATE AS CREATED_DATE,
+        L.LEAD_DELIVERED_TO_SALES_DATE,
+        L.LEAD_REOPENED_DATE,
+        L.LEAD_RECEIVED_DATE AS RECEIVED_DATE,
+        u.NAME AS CREATED_BY_NAME,
+        u.SALES_ROLE_C AS CREATED_BY_SALES_ROLE,
+        ua.FULL_NAME AS LEAD_OWNER,
+        ua.SALES_ROLE AS LEAD_OWNER_SALES_ROLE,
+        CASE
+           WHEN ua.ROLE_TEAM LIKE '% Partner %' THEN TRIM(split_part (ua.ROLE_TEAM,'Partner',1))
+         END AS LEAD_OWNER_ROLE_TEAM,
+        ua.SALES_INDUSTRY AS LEAD_OWNER_SALES_INDUSTRY,
+        CASE
+            WHEN LOWER(L.LEAD_SALES_GEO) = 'americas' THEN 'AMER'
+            WHEN UPPER(L.LEAD_SALES_GEO) IN ('EMEA', 'AMER', 'APAC', 'JAPAN') THEN UPPER(L.LEAD_SALES_GEO)
+            ELSE NULL
+        END AS LEAD_GEO,
+        L.LEAD_COUNTRY,
+        CASE
+            WHEN L.LEAD_COUNTRY IN ('us', 'usa') THEN 'United States'
+            WHEN L.LEAD_COUNTRY IN ('deutschland') THEN 'Germany'
+            WHEN L.LEAD_COUNTRY IN ('uk', 'great britain') THEN 'United Kingdom'
+            WHEN LOWER(L.LEAD_COUNTRY) IN (
+                SELECT
+                    DISTINCT LOWER(FUZZY_SEARCH_CODE) AS COUNTRY
+                FROM
+                    {{ ref('LOOKUP_COUNTRY_MAPPING') }}
+            ) THEN L.LEAD_COUNTRY -- check if Lead Country is valid, else use Account Country
+            WHEN LOWER(ACCOUNTS.COUNTRY) IN (
+                SELECT
+                    DISTINCT LOWER(FUZZY_SEARCH_CODE) AS COUNTRY
+                FROM
+                    {{ ref('LOOKUP_COUNTRY_MAPPING') }}
+            ) THEN ACCOUNTS.COUNTRY -- if lead country is not identified, then use the account country
+            ELSE NULL
+        END AS LEAD_COUNTRY_FINAL,
+        CASE
+            WHEN LOWER(ua.SALES_GEO) = 'americas' THEN 'AMER'
+            WHEN UPPER(ua.SALES_GEO) IN ('AMER', 'EMEA', 'APAC', 'JAPAN') THEN UPPER(ua.SALES_GEO)
+            ELSE NULL
+        END AS LEAD_OWNER_SALES_GEO,
+        NULLIF(ua.SALES_COUNTRY, '') AS LEAD_OWNER_SALES_COUNTRY,
+        ua.LEAD_OWNER_MANAGER,
+        CASE
+            WHEN LOWER(ACCOUNTS.GEO) = 'americas' THEN 'AMER'
+            WHEN UPPER(ACCOUNTS.GEO) IN ('AMER', 'EMEA', 'APAC', 'JAPAN') THEN UPPER(ACCOUNTS.GEO)
+            ELSE NULL
+        END AS LEAD_ACCOUNT_GEO,
+        NULLIF(ACCOUNTS.COUNTRY, '') AS LEAD_ACCOUNT_COUNTRY,
+        CASE
+            WHEN L.LEAD_TYPE = 'Sales Generated Lead' THEN 'SGL'
+            ELSE L.LEAD_TYPE
+        END AS LEAD_TYPE,
+        L.LEAD_CLOSED_DATE,
+        L.LEAD_STATUS_REASON AS LEAD_CLOSE_REASON,
+        CASE
+            WHEN L.LEAD_STATUS = 'Qualified' THEN 'Qualifying'
+            ELSE L.LEAD_STATUS
+        END AS LEAD_STATUS,
+        CASE
+            WHEN LOWER(L.LEAD_STATUS) IN ('closed', 'close')
+            AND (COALESCE(LOWER(L.LEAD_STATUS_REASON), '')) IN ('error upload', 'error to upload')
+            OR (L.LEAD_IS_DELETED = 'TRUE') THEN 'N'
+            ELSE 'Y'
+        END AS VALID_LEAD_FLAG,
+        CASE
+           WHEN LOWER(L.LEAD_STATUS) IN ('outreach','qualifying','converted','qualified') THEN 'Y'
+           WHEN LOWER(L.LEAD_STATUS) IN ('new') THEN 'N'
+           WHEN (LOWER(L.LEAD_STATUS) IN ('closed','close')) AND (LOWER(L.LEAD_STATUS_REASON) NOT LIKE '%clean%' AND LOWER(L.LEAD_STATUS_REASON) NOT IN ('retired campaign','error upload','error to upload','aged lead','aged leads','aging lead','expired','completed')) THEN 'Y'
+           WHEN (L.LEAD_LAST_ACTIVITY_DATE IS NOT NULL) AND (DATEDIFF (DAY,DATE (RECEIVED_DATE),DATE (L.LEAD_LAST_ACTIVITY_DATE))) >= 0 THEN 'Y'
+           ELSE 'N'
+        END AS TOUCHED_FLAG,
+        CASE
+            WHEN LOWER(L.LEAD_STATUS) IN ('closed', 'close') THEN 'Closed'
+            WHEN LOWER(L.LEAD_STATUS) IN ('converted') THEN 'Converted'
+            ELSE 'Open'
+        END AS OPEN_CLOSED_CONV_FLAG,
+        CASE
+           WHEN LOWER(L.LEAD_STATUS) IN ('converted') THEN 'Y'
+           WHEN (LOWER(L.LEAD_STATUS) IN ('closed','close')) AND (LOWER(L.LEAD_STATUS_REASON) NOT IN ('retired campaign','error upload','error to upload','lead cleanup','clean audit','inactive user') AND LOWER(L.LEAD_STATUS_REASON) NOT LIKE '%clean%') THEN 'Y'
+           ELSE 'N'
+        END AS COMPLETED_BY_SALES,
+        CASE
+           WHEN (LOWER(L.LEAD_STATUS) IN ('closed','close')) AND (LOWER(L.LEAD_STATUS_REASON) IN ('retired campaign','error upload','error to upload','lead cleanup','clean audit') AND LOWER(L.LEAD_STATUS_REASON) LIKE '%clean%') THEN 'Y'
+           ELSE 'N'
+        END AS RETIRED_LEAD,
+        DATE (L.LEAD_FIRST_ACTIVITY_START_DATE) AS FIRST_ACTIVITY_START_DATE,
+        DATE (L.LEAD_LAST_ACTIVITY_DATE) AS LAST_ACTIVITY_DATE,
+        L.LEAD_COMPANY_ACCOUNT AS COMPANY_ACCOUNT,
+        L.LEAD_CONVERTED_OPPORTUNITY_ID AS OPPORTUNITY_ID,
+        L.LEAD_FAST_TRACK_TYPE__C AS FAST_TRACK_TYPE,
+        CASE
+          WHEN L.LEAD_FAST_TRACK_TYPE__C IS NOT NULL THEN 'Y'
+          WHEN L.LEAD_TYPE = 'MQL' AND L.LEAD_TELEQUALIFIED__C = 'true' THEN 'Y'
+          ELSE 'N'
+        END AS FAST_TRACK_OR_TQL,
+        CAST(L.LEAD_TELEQUALIFIED__C AS VARCHAR(20)) AS TELEQUALIFIED,
+        L.LEAD_ACCOUNT__C AS SFDC_ACCOUNT_ID,
+        CASE
+            WHEN LOWER(ua.FULL_NAME) IN ('lead partner reassignment queue')
+                THEN 'Partner/reseller'
+            WHEN LOWER(ua.PARTNER_TYPE) = 'associate' AND LOWER(ua.VENDOR_TYPE) = 'tele-vendor'
+                THEN 'Tele Vendor'
+            WHEN LOWER(ua.ACCOUNT_TYPE) = 'distributor' OR LOWER(ua.PARTNER_TYPE) = 'distributor'
+                THEN 'Distributor'
+            WHEN LOWER(ua.ACCOUNT_NAME) LIKE '%tata%'
+                THEN 'tata'
+            WHEN LOWER(ua.ACCOUNT_TYPE) IN ('reseller', 'master reseller') OR LOWER(ua.PARTNER_TYPE) IN ('reseller', 'master reseller')
+                THEN 'Partner/reseller'
+            WHEN LOWER(ua.PARTNER_TYPE) = 'isv'
+                THEN 'Partner/ISV'
+            WHEN LOWER(p.PARTNER_TYPE__C) = 'associate' AND LOWER(p.VENDOR_TYPE__C) = 'tele-vendor'
+                THEN 'Tele Vendor'
+            WHEN LOWER(p.TYPE) = 'distributor' OR LOWER(p.PARTNER_TYPE__C) = 'distributor'
+                THEN 'Distributor'
+            WHEN LOWER(p.NAME) LIKE '%tata%'
+                THEN 'tata'
+            WHEN LOWER(p.TYPE) IN ('reseller', 'master reseller') OR LOWER(p.PARTNER_TYPE__C) IN ('reseller', 'master reseller')
+                THEN 'Partner/reseller'
+            WHEN LOWER(p.PARTNER_TYPE__C) = 'isv'
+                THEN 'Partner/ISV'
+            WHEN p.NAME IS NOT NULL
+                THEN 'Partner/reseller'
+            WHEN LOWER(ua.FULL_NAME) IN ('opty admin queue')
+                THEN 'Partner/reseller'
+            ELSE 'tata'
+        END AS ADSK_PARTNER_TV_FLAG,
+        CASE
+            -- added new changes for GreenField MOTMDSA2336
+            -- WHEN LOWER(ACCOUNTS.NAMED_ACCOUNT_GROUP) NOT IN ('territory','greenfield') AND ACCOUNTS.NAMED_ACCOUNT_GROUP IS NOT NULL
+            -- removing Greenfield from Territory bkt and including it in ABSM bkt MOTMDSA2449
+            WHEN LOWER(ACCOUNTS.NAMED_ACCOUNT_GROUP) <> 'territory' AND ACCOUNTS.NAMED_ACCOUNT_GROUP IS NOT NULL
+                THEN ACCOUNTS.NAMED_ACCOUNT_GROUP
+
+            -- added new changes for GreenField MOTMDSA2336
+            -- WHEN LOWER(ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP) NOT IN ('territory', 'greenfield') AND ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP IS NOT NULL
+            -- removing Greenfield from Territory bkt and including it in ABSM bkt MOTMDSA2449
+            WHEN LOWER(ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP) <> 'territory' AND ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP IS NOT NULL
+                THEN ACCOUNTS.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP
+            ELSE 'Territory'
+        END AS LEAD_NAG_KEY,
+        L.LEAD_RESPONSE_TYPE__C AS RESPONSE_TYPE,
+        ACCOUNTS.ACCOUNT_CSN AS ACCOUNT_CSN,
+        ACCOUNTS.ACCOUNT_NAME AS ACCOUNT_NAME,
+        ACCOUNTS.OWNER_ID AS ACCOUNT_OWNER_ID,
+        ACCOUNTS.A_OWNER_MOD AS ACCOUNT_OWNER_NAME,
+        ACCOUNTS.CORPORATE_PARENT_ACCOUNT_NAME AS PARENT_ACCOUNT_NAME,
+        ACCOUNTS.CORPORATE_PARENT_ACCOUNT_CSN AS PARENT_ACCOUNT_CSN,
+        CASE
+           WHEN ACCOUNTS.ACCOUNT_CSN IS NULL THEN 'no_csn'
+        END AS CSN_KEY,
+        CASE
+           WHEN l.LEAD_SOURCE__C LIKE '%CBR%' THEN 'Y'
+           ELSE 'N'
+         END AS CBR_FLAG,
+        ACCOUNTS.TSE_ASSIGNED_ACCOUNT AS FOCUS_ACCOUNT_FLAG,
+        CASE
+            WHEN UPPER(L.LEAD_PRODUCTINFO__C) = 'ARCHITECTURE ENGINEERING & CONSTRUCTION COLLECTION' THEN 'ARCHITECTURE ENGINEERING CONSTRUCTION COLLECTION'
+            WHEN REGEXP_LIKE (L.LEAD_PRODUCTINFO__C, '[0-9]{1}.*')
+            AND LENGTH(L.LEAD_PRODUCTINFO__C) > 25 THEN RIGHT(
+                UPPER(L.LEAD_PRODUCTINFO__C),
+                (LEN(UPPER(L.LEAD_PRODUCTINFO__C)) -18)
+            )
+            ELSE UPPER(L.LEAD_PRODUCTINFO__C)
+        END AS MOST_RECENT_PI,
+        L.LEAD_APRIMO_ACTIVITY_ID AS FIRST_TACTIC_ID,
+        L.LEAD_SOURCE__C AS FIRST_TACTIC_NAME,
+        CASE
+            WHEN LEN(L.LEAD_APRIMO_ACTIVITY_ID) = 10 AND IS_INTEGER(TRY_TO_NUMBER(L.LEAD_APRIMO_ACTIVITY_ID))
+                THEN LEFT(L.LEAD_APRIMO_ACTIVITY_ID, 7) --convert tasksID into TacticsID
+            WHEN LEN(L.LEAD_APRIMO_ACTIVITY_ID) IN (6, 7) AND IS_INTEGER(TRY_TO_NUMBER (L.LEAD_APRIMO_ACTIVITY_ID))
+                THEN L.LEAD_APRIMO_ACTIVITY_ID -- clean up Aprimo ID
+            ELSE NULL
+        END AS FIRST_TACTIC_KEY,
+        L.LEAD_SCORE2__C,
+        L.LEAD_MI_SCORE__C AS MI_SCORE__C,
+        L.SFDC_LEAD_SOURCE,
+        DATE (GREATEST(COALESCE(L.LEAD_CONVERTED_DATE,'0000-01-01'),COALESCE(L.LEAD_CLOSED_DATE,'0000-01-01'))) AS CLOSED_CONVERTED_DATE,
+        DATE (L.LEAD_CONVERTED_DATE) AS CONVERTED_DATE,
+        DATE (SELECT MAX(LEAD_TABLE_LAST_REFRESH_DATE) FROM {{ ref('FFM_MID_FUNNEL') }}) AS TABLE_LAST_REFRESH_DATE
+    FROM
+        LEADS_RAW L
+        LEFT JOIN {{ var('ACCOUNT_SFDC_RAW') }} p ON L.LEAD_PARTNER_ACCOUNT = p.ID
+        LEFT JOIN USER_ACCOUNT ua ON L.LEAD_OWNER_ID = ua.USER_ID
+        LEFT JOIN (
+            SELECT
+                ac.ACCOUNT_CSN,
+                ac.ACCOUNT_NAME,
+                ac.OWNER_ID,
+                -- ac.NAMED_ACCOUNT_GROUP,
+                NR.NAG_REPLACEMENT AS NAMED_ACCOUNT_GROUP,
+                -- ac.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP,
+                PNR.NAG_REPLACEMENT AS CORPORATE_PARENT_NAMED_ACCOUNT_GROUP,
+                ac.GEO,
+                ac.SFDC_ACCOUNT_ID,
+                ac.COUNTRY,
+                ac.CORPORATE_PARENT_ACCOUNT_NAME,
+                ac.CORPORATE_PARENT_ACCOUNT_CSN,
+                ac.TSE_ASSIGNED_ACCOUNT,
+                CASE
+                    WHEN ao.IS_ACTIVE = 'true' THEN ao.NAME
+                    ELSE CONCAT (ao.NAME, ' (inactive)')
+                END AS A_OWNER_MOD
+            FROM
+                {{ var('ACCOUNTS_WITH_CORPORATE_PARENTS') }} ac
+                LEFT JOIN {{ var('SALESFORCE.USER') }} ao ON ac.OWNER_ID = ao.ID
+                LEFT JOIN RAW.LOOKUPS.NAG_REPLACEMENT_MAPPING NR ON ac.NAMED_ACCOUNT_GROUP = NR.NAG
+                LEFT JOIN RAW.LOOKUPS.NAG_REPLACEMENT_MAPPING PNR ON ac.CORPORATE_PARENT_NAMED_ACCOUNT_GROUP = PNR.NAG
+        ) ACCOUNTS ON L.LEAD_ACCOUNT__C = ACCOUNTS.SFDC_ACCOUNT_ID
+        LEFT JOIN {{ var('SALESFORCE.USER') }} u ON L.LEAD_CREATED_BY_ID = u.ID
+    WHERE
+        L.LEAD_CREATED_DATE >= $START_DATE
+        OR L.LEAD_REOPENED_DATE >= $START_DATE
+        OR L.LEAD_CONVERTED_TO_LEAD_DATE >= $START_DATE
+),
+LEADS_FINAL AS (
+    SELECT
+        LS.LEAD_ID,
+        LS.LEAD_SFDC_GUID,
+        LS.RECEIVED_DATE,
+        DT.FYQUARTER_WEEK,
+        DT.FYMONTH,
+        DT.FYQUARTER,
+        DT.FYYEAR,
+        LS.CREATED_DATE,
+        LS.LEAD_DELIVERED_TO_SALES_DATE,
+        LS.LEAD_REOPENED_DATE,
+        LS.LEAD_CLOSED_DATE,
+        LS.CLOSED_CONVERTED_DATE,
+        LS.CONVERTED_DATE,
+        LS.FIRST_ACTIVITY_START_DATE,
+        LS.LAST_ACTIVITY_DATE,
+        LS.TABLE_LAST_REFRESH_DATE,
+        LEAD_CNTRY_GEO.COUNTRY,
+        LEAD_CNTRY_GEO.MKT_REPORTING_GEO AS LEAD_GEO_MAPPED,
+        LS.LEAD_COUNTRY,
+        LS.LEAD_COUNTRY_FINAL,
+        LS.LEAD_GEO,
+        LS.LEAD_OWNER_SALES_GEO,
+        LS.LEAD_OWNER_SALES_COUNTRY,
+        LEAD_OWNER_CNTRY_GEO.COUNTRY AS LEAD_OWNER_SALES_COUNTRY_MAPPED,
+        LEAD_OWNER_CNTRY_GEO.MKT_REPORTING_GEO AS LEAD_OWNER_SALES_GEO_MAPPED,
+        LS.LEAD_ACCOUNT_GEO,
+        LS.LEAD_ACCOUNT_COUNTRY,
+        COALESCE(
+            LEAD_CNTRY_GEO.MKT_REPORTING_GEO,
+            LS.LEAD_GEO,
+            LS.LEAD_OWNER_SALES_GEO,
+            LEAD_OWNER_CNTRY_GEO.MKT_REPORTING_GEO,
+            LS.LEAD_ACCOUNT_GEO
+        ) AS GEO,
+        LS.LEAD_TYPE,
+        LS.LEAD_CLOSE_REASON,
+        LS.LEAD_STATUS,
+        LS.VALID_LEAD_FLAG,
+        LS.OPEN_CLOSED_CONV_FLAG,
+        LS.ADSK_PARTNER_TV_FLAG,
+        LS.TOUCHED_FLAG,
+        LS.LEAD_NAG_KEY,
+        LS.SFDC_LEAD_SOURCE,
+        LS.LEAD_SCORE2__C,
+        LS.MI_SCORE__C,
+        LS.CREATED_BY_NAME,
+        LS.CREATED_BY_SALES_ROLE,
+        LS.LEAD_OWNER,
+        LS.LEAD_OWNER_SALES_ROLE,
+        LS.LEAD_OWNER_ROLE_TEAM,
+        LS.LEAD_OWNER_SALES_INDUSTRY,
+        LS.LEAD_OWNER_MANAGER,
+        LS.ACCOUNT_CSN,
+        LS.ACCOUNT_NAME,
+        LS.ACCOUNT_OWNER_NAME,
+        LS.PARENT_ACCOUNT_NAME,
+        LS.PARENT_ACCOUNT_CSN,
+        LS.MOST_RECENT_PI AS MOST_RECENT_PI_ORIG,
+        COALESCE(PR_CD.PRODUCT, PR_NM.PRODUCT, TRIM(LS.MOST_RECENT_PI)) AS MOST_RECENT_PI,
+        CASE
+            WHEN COALESCE(PR_CD.PRODUCT, PR_NM.PRODUCT) = 'TOKEN FLEX' THEN 'AEC'
+            ELSE COALESCE(PR_CD.PRODUCT_INDUSTRY, PR_NM.PRODUCT_INDUSTRY)
+        END AS MOST_RECENT_PI_INDUSTRY,
+        COALESCE(PR_CD.PRODUCT_FAMILY, PR_NM.PRODUCT_FAMILY) AS MOST_RECENT_PRODUCT_FAMILY,
+        LS.FIRST_TACTIC_ID,
+        LS.FIRST_TACTIC_KEY,
+        LS.FIRST_TACTIC_NAME,
+        T.PARENT_CAMPAIGN_NAME,
+        T.CHILD_CAMPAIGN_NAME,
+        T.CAMPAIGN_INDUSTRY,
+        LS.COMPLETED_BY_SALES,
+        LS.RETIRED_LEAD,
+        LS.COMPANY_ACCOUNT,
+        LS.OPPORTUNITY_ID,
+        LS.FAST_TRACK_TYPE,
+        LS.FAST_TRACK_OR_TQL,
+        LS.TELEQUALIFIED,
+        LS.SFDC_ACCOUNT_ID,
+        LS.RESPONSE_TYPE,
+        LS.ACCOUNT_OWNER_ID,
+        LS.CSN_KEY,
+        LS.CBR_FLAG,
+        LS.FOCUS_ACCOUNT_FLAG,
+        CASE
+           WHEN ls.FIRST_TACTIC_KEY IS NULL THEN 'N'
+           ELSE 'Y'
+         END AS HAS_TACTIC_FLAG,
+        CONCAT(LS.ACCOUNT_CSN,'_',LS.COMPANY_ACCOUNT) AS CSN_W_ACCOUNT,
+        T.VEHICLE_DETAIL AS FIRST_TACTIC_VEHICLE_DETAIL,
+         CASE
+           WHEN T.VEHICLE_DETAIL = 'Trial' THEN 'Y'
+           WHEN T.VEHICLE_DETAIL LIKE '%Trial%' THEN 'Y'
+           ELSE 'N'
+         END AS TRIAL_FLAG,
+         CASE
+           WHEN ls.FIRST_TACTIC_NAME LIKE '%lead scoring%' OR ls.FIRST_TACTIC_NAME LIKE '%Lead Scoring%' THEN 'Y'
+           ELSE 'N'
+         END AS LEAD_SCORING_FLAG,
+         CASE
+           WHEN ls.TOUCHED_FLAG = 'Y' AND (ls.RECEIVED_DATE IS NULL OR ls.FIRST_ACTIVITY_START_DATE IS NULL OR ls.RECEIVED_DATE > ls.FIRST_ACTIVITY_START_DATE) THEN NULL
+           WHEN ls.RECEIVED_DATE = ls.FIRST_ACTIVITY_START_DATE THEN 0
+           WHEN ls.TOUCHED_FLAG = 'N' THEN 9999
+           WHEN ls.RECEIVED_DATE IS NULL OR ls.FIRST_ACTIVITY_START_DATE IS NULL THEN NULL
+           ELSE (DATEDIFF (DAY,ls.RECEIVED_DATE,ls.FIRST_ACTIVITY_START_DATE) -1 -(DATEDIFF (WEEK,ls.RECEIVED_DATE,ls.FIRST_ACTIVITY_START_DATE)*2 -(
+             CASE
+               WHEN DAYNAME (ls.RECEIVED_DATE) IN ('Sun') THEN 1
+               ELSE 0
+             END ) +(
+             CASE
+               WHEN DAYNAME (ls.FIRST_ACTIVITY_START_DATE) IN ('Sat') THEN 1
+               ELSE 0
+             END ) -1))
+         END AS WD_FIRST_TOUCH,
+         CASE
+           WHEN ls.RECEIVED_DATE > ls.TABLE_LAST_REFRESH_DATE THEN NULL
+           WHEN ls.RECEIVED_DATE = ls.TABLE_LAST_REFRESH_DATE THEN 0
+           ELSE (DATEDIFF (DAY,ls.RECEIVED_DATE,ls.TABLE_LAST_REFRESH_DATE) -(DATEDIFF (WEEK,ls.RECEIVED_DATE,ls.TABLE_LAST_REFRESH_DATE)*2 -(
+             CASE
+               WHEN DAYNAME (ls.RECEIVED_DATE) IN ('Sun') THEN 1
+               ELSE 0
+             END ) +(
+             CASE
+               WHEN DAYNAME (ls.TABLE_LAST_REFRESH_DATE) IN ('Sat') THEN 1
+               ELSE 0
+             END )))
+         END AS WORKDAYS_COLUMN,
+         CASE
+           WHEN ls.OPEN_CLOSED_CONV_FLAG NOT IN ('Converted','Closed') THEN 9999
+           WHEN ls.OPEN_CLOSED_CONV_FLAG IN ('Converted','Closed') AND (ls.CLOSED_CONVERTED_DATE IS NULL OR ls.RECEIVED_DATE IS NULL OR ls.RECEIVED_DATE > ls.CLOSED_CONVERTED_DATE) THEN NULL
+           WHEN ls.OPEN_CLOSED_CONV_FLAG IN ('Converted','Closed') AND (ls.CLOSED_CONVERTED_DATE IS NOT NULL AND ls.RECEIVED_DATE IS NOT NULL AND ls.RECEIVED_DATE <= ls.CLOSED_CONVERTED_DATE) THEN (DATEDIFF (DAY,ls.RECEIVED_DATE,ls.CLOSED_CONVERTED_DATE) -(DATEDIFF (WEEK,ls.RECEIVED_DATE,ls.CLOSED_CONVERTED_DATE)*2 -(
+             CASE
+               WHEN DAYNAME (ls.RECEIVED_DATE) IN ('Sun') THEN 1
+               ELSE 0
+             END ) +(
+             CASE
+               WHEN DAYNAME (ls.CLOSED_CONVERTED_DATE) IN ('Sat') THEN 1
+               ELSE 0
+             END )))
+         END AS WD_TO_COMPLETION,
+        CURRENT_TIMESTAMP AS RUN_TIMESTAMP
+    FROM
+        LEADS_SUBSET LS
+        -- Join with Product lookup at Product Code
+        LEFT JOIN PRODUCT_CD PR_CD
+            ON TRIM(LS.MOST_RECENT_PI) = PR_CD.PRODUCT_CODE
+        -- Join with Product lookup at Product Name to handle edge-cases
+        LEFT JOIN PRODUCT_NM PR_NM
+            ON TRIM(LS.MOST_RECENT_PI) = PR_NM.PRODUCT
+        -- Join with Allocadia Line Item Master to fetch Campaign Name, Campaign Industry, Vehicle Detail
+        LEFT JOIN TACTIC_CAMPAIGN T
+            ON TO_VARCHAR(LS.FIRST_TACTIC_KEY) = TO_VARCHAR(T.LINE_ITEM_ID)
+        -- Join with Country Geo Lookup using Lead Country
+        LEFT JOIN {{ ref('LOOKUP_COUNTRY_MAPPING') }} LEAD_CNTRY_GEO
+            ON UPPER(LS.LEAD_COUNTRY_FINAL) = UPPER(LEAD_CNTRY_GEO.FUZZY_SEARCH_CODE)
+        -- Join with Country Geo Lookup using Lead Owner Sales Country
+        LEFT JOIN {{ ref('LOOKUP_COUNTRY_MAPPING') }} LEAD_OWNER_CNTRY_GEO
+            ON UPPER(LS.LEAD_OWNER_SALES_COUNTRY) = UPPER(LEAD_OWNER_CNTRY_GEO.FUZZY_SEARCH_CODE)
+        -- Join with Date Dimensions
+        LEFT JOIN DATE_HIERARCHY DT
+            ON DATE(LS.RECEIVED_DATE) = DATE(DT.DATE_KEY)
+    WHERE
+        LS.RECEIVED_DATE >= $START_DATE
+)
+
+SELECT
+    LEAD_ID,
+    LEAD_SFDC_GUID,
+    RECEIVED_DATE,
+    FYQUARTER_WEEK,
+    FYMONTH,
+    FYQUARTER,
+    FYYEAR,
+    CREATED_DATE,
+    LEAD_DELIVERED_TO_SALES_DATE,
+    LEAD_REOPENED_DATE,
+    LEAD_CLOSED_DATE,
+    CLOSED_CONVERTED_DATE,
+    CONVERTED_DATE,
+    FIRST_ACTIVITY_START_DATE,
+    LAST_ACTIVITY_DATE,
+    LEAD_COUNTRY,
+    LEAD_COUNTRY_FINAL,
+    LEAD_GEO,
+    LEAD_GEO_MAPPED,
+    LEAD_OWNER_SALES_GEO,
+    LEAD_OWNER_SALES_GEO_MAPPED,
+    LEAD_OWNER_SALES_COUNTRY,
+    LEAD_OWNER_SALES_COUNTRY_MAPPED,
+    LEAD_ACCOUNT_GEO,
+    LEAD_ACCOUNT_COUNTRY,
+    COUNTRY,
+    GEO,
+    CONCAT(
+        COALESCE(COUNTRY, 'NA'),
+        '_',
+        COALESCE(GEO, 'NA')
+    ) AS COUNTRY_GEO_KEY,
+    LEAD_TYPE,
+    LEAD_CLOSE_REASON,
+    LEAD_STATUS,
+    SFDC_LEAD_SOURCE,
+    LEAD_SCORE2__C,
+    MI_SCORE__C,
+    CREATED_BY_NAME,
+    CREATED_BY_SALES_ROLE,
+    LEAD_OWNER,
+    LEAD_OWNER_SALES_ROLE,
+    LEAD_OWNER_ROLE_TEAM,
+    LEAD_OWNER_SALES_INDUSTRY,
+    LEAD_OWNER_MANAGER,
+    VALID_LEAD_FLAG,
+    OPEN_CLOSED_CONV_FLAG,
+    ADSK_PARTNER_TV_FLAG,
+    TOUCHED_FLAG,
+    LEAD_NAG_KEY,
+    ACCOUNT_CSN,
+    ACCOUNT_NAME,
+    ACCOUNT_OWNER_NAME,
+    PARENT_ACCOUNT_NAME,
+    PARENT_ACCOUNT_CSN,
+    MOST_RECENT_PI_ORIG,
+    MOST_RECENT_PI,
+    MOST_RECENT_PI_INDUSTRY,
+    MOST_RECENT_PRODUCT_FAMILY,
+    FIRST_TACTIC_ID,
+    FIRST_TACTIC_KEY,
+    FIRST_TACTIC_NAME,
+    PARENT_CAMPAIGN_NAME,
+    CHILD_CAMPAIGN_NAME,
+    CAMPAIGN_INDUSTRY,
+    COMPLETED_BY_SALES,
+    RETIRED_LEAD,
+    COMPANY_ACCOUNT,
+    OPPORTUNITY_ID,
+    FAST_TRACK_TYPE,
+    FAST_TRACK_OR_TQL,
+    TELEQUALIFIED,
+    SFDC_ACCOUNT_ID,
+    RESPONSE_TYPE,
+    ACCOUNT_OWNER_ID,
+    CSN_KEY,
+    CBR_FLAG,
+    FOCUS_ACCOUNT_FLAG,
+    HAS_TACTIC_FLAG,
+    CSN_W_ACCOUNT,
+    FIRST_TACTIC_VEHICLE_DETAIL,
+    TRIAL_FLAG,
+    LEAD_SCORING_FLAG,
+    WD_FIRST_TOUCH,
+    WORKDAYS_COLUMN,
+    WD_TO_COMPLETION,
+    CASE
+           WHEN SFDC_LEAD_SOURCE = 'Inbound' THEN 'Y'
+           WHEN FIRST_TACTIC_NAME LIKE '%Inbound%' AND FIRST_TACTIC_NAME NOT LIKE '%Conversica%' THEN 'Y'
+           WHEN GEO = 'EMEA' AND FIRST_TACTIC_NAME IS NULL AND LEAD_OWNER_SALES_ROLE = 'SDR' THEN 'Y'
+           ELSE 'N'
+         END AS INBOUND_FLAG,
+    CASE
+         WHEN TELEQUALIFIED = 'true' AND LEAD_TYPE = 'MQL' THEN 'Telequalified'
+         WHEN FAST_TRACK_TYPE IS NOT NULL THEN FAST_TRACK_TYPE
+         WHEN TRIAL_FLAG = 'Y' THEN 'Trial'
+         WHEN INBOUND_FLAG = 'Y' THEN 'Inbound Call'
+         WHEN LEAD_SCORING_FLAG = 'Y' THEN 'Lead Scoring'
+         WHEN CBR_FLAG = 'Y' THEN 'AutoCAD Promo'
+         ELSE 'Other'
+       END AS LEAD_SOURCE,
+       CASE
+         WHEN WD_FIRST_TOUCH IS NULL THEN 'N/A'
+         WHEN WD_FIRST_TOUCH <= 2 THEN '< 2 days'
+         WHEN WD_FIRST_TOUCH <= 5 THEN '2 to 5 days'
+         WHEN WD_FIRST_TOUCH > 5 AND WD_FIRST_TOUCH <> 9999 THEN '> 5 days'
+         ELSE 'UNTOUCHED'
+       END AS WD_FIRST_TOUCH_BANDS,
+       CASE
+         WHEN WORKDAYS_COLUMN >= 0 AND WORKDAYS_COLUMN <= 3 THEN '<3 Days'
+         WHEN WORKDAYS_COLUMN > 3 AND WORKDAYS_COLUMN <= 10 THEN '4 - 10 Days'
+         ELSE '>10 Days'
+       END AS AGE_BANDS,
+       CAST(CASE
+         WHEN FIRST_TACTIC_ID IN ('4798855','5432637') THEN LEAD_SCORE2__C
+         ELSE NULL
+       END AS VARCHAR) AS D2B_SCORE,
+       CAST(CASE
+         WHEN FIRST_TACTIC_ID = '3840134' THEN MI_SCORE__C
+         ELSE NULL
+       END AS VARCHAR) AS CBR_SCORE,
+       CASE
+         WHEN WD_TO_COMPLETION IS NULL THEN 'N/A'
+         WHEN WD_TO_COMPLETION >= 0 AND WD_TO_COMPLETION < 10 THEN '< 10 days'
+         WHEN WD_TO_COMPLETION >= 10 AND WD_TO_COMPLETION <= 20 THEN '10 to 20 days'
+         WHEN WD_TO_COMPLETION > 20 AND WD_TO_COMPLETION <> 9999 THEN '> 20 days'
+         ELSE 'NOT COMPLETE'
+       END AS WD_TO_COMPLETION_BANDS,
+       CASE
+         WHEN CLOSED_CONVERTED_DATE = '0000-01-01' THEN NULL
+         ELSE CLOSED_CONVERTED_DATE
+       END AS COMPLETION_DATE,
+    TABLE_LAST_REFRESH_DATE,
+    RUN_TIMESTAMP
+FROM
+    LEADS_FINAL
+{#
+SELECT
+    LEAD_ID,
+    LEAD_GUID AS LEAD_SFDC_GUID,
+    LEAD_CREATED_DATE,
+    LEAD_DELIVERED_TO_SALES_DATE,
+    LEAD_REOPENED_DATE,
+    LEAD_CLOSED_DATE,
+    RECEIVED_DATE,
+    RECEIVECREATED_BY_NAMED_DATE,
+    -- CREATED_BY_NAME,
+    -- CREATED_BY_SALES_ROLE,
+    --LEAD_OWNER, LEAD_OWNER_SALES_ROLE, LEAD_OWNER_ROLE_TEAM, LEAD_OWNER_SALES_INDUSTRY
+    LEAD_OWNER_ID,
+    CASE
+        WHEN LOWER(LEAD_GEO) = 'americas' THEN 'AMER'
+        WHEN UPPER(LEAD_GEO) IN ('EMEA', 'AMER', 'APAC', 'JAPAN') THEN UPPER(L.SALES_GEO__C)
+        ELSE NULL
+    END AS LEAD_GEO,
+    LEAD_COUNTRY,
+    LEAD_ACCOUNT__C,
+    -- LEAD_OWNER_SALES_GEO,
+    -- LEAD_OWNER_SALES_COUNTRY,
+    --LEAD_OWNER_MANAGER,
+    --LEAD_ACCOUNT_GEO,
+    LEAD_TYPE,
+    LEAD_CLOSED_DATE,
+    LEAD_STATUS_REASON AS LEAD_CLOSE_REASON,
+    LEAD_STATUS,
+    LEAD_IS_DELETED,
+    LEAD_FIRST_ACTIVITY_START_DATE
+    LEAD_LAST_ACTIVITY_DATE,
+    LEAD_COMPANY_ACCOUNT,
+    LEAD_CONVERTED_OPPORTUNITY_ID,
+    LEAD_FAST_TRACK_TYPE__C,
+    LEAD_TELEQUALIFIED__C,
+    LEAD_RESPONSE_TYPE__C,
+    LEAD_SOURCE__C,
+    LEAD_PRODUCTINFO__C,
+    LEAD_APRIMO_ACTIVITY_ID,
+    LEAD_SCORE2__C,
+    LEAD_MI_SCORE__C,
+    SFDC_LEAD_SOURCE,
+    LEAD_CONVERTED_DATE,
+    LEAD_TABLE_LAST_REFRESH_DATE, #}

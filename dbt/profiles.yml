@@ -1,0 +1,216 @@
+LVGENAI:
+  outputs:
+    dev:
+      account: xba65735
+      database: GENAI
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: SYSADMIN
+      schema: DATA
+      threads: 1
+      type: snowflake
+      user: Balaji_R
+      warehouse: COMPUTE_WH
+  target: dev
+LV_GENAI:
+  outputs:
+    dev:
+      account: xba65735
+      database: GENAI
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: SYSADMIN
+      schema: DATA
+      threads: 1
+      type: snowflake
+      user: Balaji_R
+      warehouse: COMPUTE_WH
+  target: dev
+dat:
+  outputs:
+    dev:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: DAT_DEV
+      threads: 1
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+    prd:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: DAT_PRD
+      threads: 1
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+  target: dev
+mpm:
+  outputs:
+    dev:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_DEV
+      threads: 10
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL
+    prd:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_PRD
+      threads: 10
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL
+  target: dev
+quarterly_fact:
+  outputs:
+    dev:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_REPORTING_QUARTERLY
+      threads: 3
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+    prd:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_REPORTING_QUARTERLY
+      threads: 3
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+  target: dev
+mpm_fact:
+  outputs:
+    dev:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_REPORTING_DEV
+      threads: 10
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+    prd:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_REPORTING_PRD
+      threads: 10
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+  target: dev
+adobe_fact:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: tredence_analytics.us-east-1
+      user: svc_p_mot_dbt
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      database: BSM_ETL
+      warehouse: BSM_ETL_MEDIUM
+      schema: BSM_REPORTING_ADOBE
+      threads: 10
+      client_session_keep_alive: true
+snowflake:
+  outputs:
+    dev:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_DEV
+      threads: 1
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL_MEDIUM
+    prd:
+      account: tredence_analytics.us-east-1
+      client_session_keep_alive: true
+      database: BSM_ETL
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      schema: MPM_PRD
+      threads: 1
+      type: snowflake
+      user: svc_p_mot_dbt
+      warehouse: BSM_ETL
+  target: dev
+
+lookback_mpm:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: tredence_analytics.us-east-1
+      user: svc_p_mot_dbt
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      database: BSM_ETL
+      warehouse: BSM_ETL
+      schema: MPM_LOOKBACK
+      threads: 10
+      client_session_keep_alive: true
+    prd:
+      type: snowflake
+      account: tredence_analytics.us-east-1
+      user: svc_p_mot_dbt
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      database: BSM_ETL
+      warehouse: BSM_ETL
+      schema: MPM_REPORTING_PRD
+      threads: 10
+      client_session_keep_alive: true
+mpm_small:
+  target: prd
+  outputs:
+    prd:
+      type: snowflake
+      account: tredence_analytics.us-east-1
+      user: svc_p_mot_dbt
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      database: BSM_ETL
+      warehouse: BSM_ETL_SMALL
+      schema: MPM_PRD
+      threads: 10
+      client_session_keep_alive: true
+    dev:
+      type: snowflake
+      account: tredence_analytics.us-east-1
+      user: svc_p_mot_dbt
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: BSM_DEVELOPER
+      database: BSM_ETL
+      warehouse: BSM_ETL_SMALL
+      schema: MPM_DEV
+      threads: 10
+      client_session_keep_alive: true

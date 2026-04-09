@@ -1,0 +1,29 @@
+dag:
+  owner: airflow
+  id: sprout_api_driver
+  schedule_interval: 30 10  * * 1-7
+  email: dibakar11081990@gmail.com
+
+tasks:
+  TASK_DBT_RUN : 'DBT_RUN_TASK'
+  TASK_SFTP_2_S3_2_SF_LOAD: 'sftp_2_s3_2_sf_load'
+  TASK_SFTP_DATA_INTEGRATION: 'dbt_run_sftp_data_integration'
+  TASK_SFTP_MOVE_FILES_TO_OUT: 'sftp_move_files_to_out'
+  TASK_RENAME_COLUMNS: 'rename_columns'
+  TASK_MDP_EXPORT_FOR_PBI_STG: 'mdp_export_for_pbi_stg'
+  TASK_MDP_LEGACY_QV_DATA: 'mdp_legacy_qv_data'
+  TASK_MDP_LEGACY_QV_DATA_AND_E2OPEN: 'mdp_legacy_qv_data_and_e2open'
+  TASK_MDP_EXPORT_WITH_LEGACY_E2: 'mdp_export_with_legacy_e2'
+  TASK_MDP_NEW_EXPORT_FOR_PBI: 'mdp_new_export_for_pbi'
+
+dbt_profile : 'mpm'
+
+tags:
+  DBT_TAG_TRIALS_LOOKUP : 'tag:TRIALS_LOOKUP'
+  DBT_TAG_SFTP_DATA_INTEGRATION: 'tag:mdp_i360_new_sftp_data_integration'
+  DBT_TAG_RENAME_COLS: 'tag:mdp_i360_new_rename_cols'
+  DBT_TAG_EXPORT_FOR_PBI_STG: 'tag:mdp_i360_new_export_for_pbi_stg'
+  DBT_TAG_LEGACY_QV_DATA: 'tag:mdp_i360_new_legacy_qv_data'
+  DBT_TAG_MDP_LEGACY_QV_DATA_AND_E2OPEN: 'tag:mdp_i360_new_legacy_qv_data_and_e2open'
+  DBT_TAG_MDP_EXPORT_WITH_LEGACY_E2: 'tag:mdp_i360_new_export_with_legacy_e2'
+  DBT_TAG_MDP_NEW_EXPORT_FOR_PBI: 'tag:mdp_i360_new_export_for_pbi'

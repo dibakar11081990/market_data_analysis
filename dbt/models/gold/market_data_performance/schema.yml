@@ -1,0 +1,337 @@
+version: 2
+
+models:
+  - name: 360I_EXPORT_FOR_PBI
+    description: >
+      Gold layer — final enriched Power BI export for the Market Data Performance 360i dashboard.
+      Joins the combined silver export with MQL/Win/ACV data (VAD and non-VAD paths),
+      activity type mapping, country ownership classification, and dashboard quarter
+      bucketing (Current Qtr, Previous Qtr, 3-6 Qtrs Ago, >6 Qtrs Ago).
+      Derived KPIs include CONSOLIDATED_MQL, ENGAGEMENTS_TOTAL, ACTUAL_ENGAGEMENTS,
+      EXPECTED_ENGAGEMENTS, and TOTAL_CMC.
+      Upstream: silver.MDF_360I_EXPORT_WITH_LEGACY_E2, silver.MDP_I360_STG,
+                external REVMART, MDP_ACV, MDP_NAMED_MQL_WIN_CMC, MDP_ACTIVITY_TYPE,
+                DIM_FUZZYSEARCH_COUNTRY, DATE_TIME_HIERARCHY
+    tags:
+      - gold
+      - market_data_performance
+      - power_bi
+
+    columns:
+      - name: METRIC_NAME
+        description: Spend or Budget.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Spend", "Budget"]
+
+      - name: YEAR_QUARTER
+        description: Fiscal year-quarter string (e.g. 2023Q2).
+        tests:
+          - not_null
+
+      - name: YEAR_QUARTER_DATE
+        description: First month date of the fiscal quarter (e.g. 2023-05-01 for Q2).
+        tests:
+          - not_null
+
+      - name: GEO
+        description: Geographic region (Americas → AMER normalised).
+        tests:
+          - not_null:
+              config:
+                where: "METRIC_NAME = 'Spend'"
+
+      - name: SUB_REGION
+        description: Sub-region.
+
+      - name: COUNTRY
+        description: Country name.
+
+      - name: COUNTRY_OWNERSHIP
+        description: >
+          Country ownership classification (e.g. 'tredence_analytics-Led' or 'Partner-Led').
+          Derived from FUZZYSEARCH_COUNTRY lookup.
+        tests:
+          - not_null
+
+      - name: MATURITY
+        description: Partner maturity (Emerging / Mature).
+        tests:
+          - accepted_values:
+              values: ["Emerging", "Mature"]
+              config:
+                where: "MATURITY IS NOT NULL AND METRIC_NAME = 'Spend'"
+
+      - name: GTM_TIER
+        description: Go-to-market tier (A/B/C/D).
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["A", "B", "C", "D"]
+
+      - name: PARTNER_TYPE
+        description: Partner type (VAD, VAR, etc.).
+
+      - name: TIER
+        description: Partner tier from Salesforce contract.
+
+      - name: CSN
+        description: Partner Customer Serial Number.
+
+      - name: PARTNER_NAME
+        description: Partner account name.
+
+      - name: CAMPAIGN_CHILD
+        description: Campaign name (child level).
+
+      - name: CAMPAIGN_PARENT
+        description: Parent campaign name.
+
+      - name: CAMPAIGN_INDUSTRY
+        description: Industry segment (AEC, AUTOCAD, D&M, M&E, X-INDUSTRY, GFP).
+        tests:
+          - accepted_values:
+              values: ["AEC", "AUTOCAD", "D&M", "M&E", "X-INDUSTRY", "GFP"]
+              config:
+                where: "CAMPAIGN_INDUSTRY IS NOT NULL"
+
+      - name: FR_NAME
+        description: Fund request name (PLAN_ID).
+
+      - name: FR_ACTIVITY_NAME
+        description: Fund request activity name (PLANDETAILID).
+
+      - name: ACTIVITY_TYPE
+        description: Marketing activity type (mapped through MDP_ACTIVITY_TYPE lookup).
+
+      - name: ACTIVITY_NAME
+        description: Activity / publication name.
+
+      - name: ACTIVITY_BEGIN_DATE
+        description: Formatted activity start date (e.g. 'February 1, 2023').
+
+      - name: ACTIVITY_END_DATE
+        description: Formatted activity end date.
+
+      - name: SUM_OF_MDF_FUNDED
+        description: MDF funded amount (campaign-split adjusted).
+
+      - name: COMBINED_INVESTMENT
+        description: Combined investment amount (campaign-split adjusted).
+
+      - name: SUM_OF_METRIC_VALUE
+        description: Primary metric value (spend or budget).
+        tests:
+          - not_null
+
+      - name: PLAN_STATUS
+        description: Plan status.
+
+      - name: PLAN_APPROVER
+        description: Plan approver name.
+
+      - name: PLAN_APPROVED_AMOUNT
+        description: Approved reimbursement amount.
+
+      - name: CLAIM_AUDIT_STATUS
+        description: Claim audit status.
+
+      - name: CLAIM_BY_DATE
+        description: Formatted claim by date.
+
+      - name: CLAIM_SUBMITTED_DATE
+        description: Claim submission date.
+
+      - name: PLAN_SUBMISSION_DATE
+        description: Plan submission date.
+
+      - name: SUBMISSION_GATE_COMPLIANT
+        description: Whether the plan was submitted within the gate window (Y/N).
+        tests:
+          - accepted_values:
+              values: ["Y", "N"]
+              config:
+                where: "SUBMISSION_GATE_COMPLIANT IS NOT NULL"
+
+      - name: ENGAGEMENT_COMPLETE
+        description: Partner engagement completion flag (Yes/No).
+        tests:
+          - accepted_values:
+              values: ["Yes", "No"]
+              config:
+                where: "ENGAGEMENT_COMPLETE IS NOT NULL"
+
+      - name: ROI_COMPLIANT
+        description: ROI compliance flag (' ' for pre-FY22Q4, 'Yes'/'No' thereafter).
+
+      - name: MDP_GATE_QUARTER
+        description: Derived MDP gate quarter for the activity.
+
+      - name: PMM
+        description: Partner Marketing Manager name (defaults to 'Undefined').
+        tests:
+          - not_null:
+              config:
+                where: "METRIC_NAME = 'Spend'"
+
+      - name: PARTNER_MANAGER
+        description: Partner manager from Salesforce user lookup.
+
+      - name: FOCUS_PARTNER
+        description: Named/focus partner flag (Y/N).
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Y", "N"]
+
+      - name: CAMPAIGN
+        description: Campaign name.
+
+      - name: CAMPAIGN_TYPE
+        description: Campaign type.
+
+      - name: RR_STATUS
+        description: Results reporting status label.
+
+      - name: FR_APPROVED_AMOUNT_LC
+        description: Fund request approved amount in local currency.
+
+      - name: FR_DESCRIPTION
+        description: Fund request description / plan description.
+
+      - name: REPORT_CREATE_DATE
+        description: Formatted report creation date.
+
+      - name: RR_HOLD_REASON
+        description: Hold/deny reason for the results report.
+
+      - name: RR_HOLD_DATE
+        description: Date the results report was placed on hold.
+
+      - name: RR_LAST_DATE_UPDATED
+        description: Last date the claim record was updated.
+
+      - name: RR_EXTERNAL_COMMENTS
+        description: External comments on the results report.
+
+      - name: RR_INTERNAL_COMMENTS
+        description: Internal comments on the results report.
+
+      - name: PLANEXTERNALCOMMENTS
+        description: External comments from the plan (360i records only; NULL for legacy).
+
+      - name: VALIDATED_MQL
+        description: Validated MQL count from CMM partner list (split by record count).
+
+      - name: WINS
+        description: Win count from CMM partner list (split by record count).
+
+      - name: ACV
+        description: Annual contract value (SF channel net-2 ACV, split by record count).
+
+      - name: TOTAL_CMC
+        description: Total MCC percentage × ACV (split by record count).
+
+      - name: CONSOLIDATED_MQL
+        description: >
+          VALIDATED_MQL for named/focus partners with validated data;
+          falls back to MQLS for others.
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "CONSOLIDATED_MQL >= 0"
+              config:
+                where: "CONSOLIDATED_MQL IS NOT NULL"
+
+      - name: ENGAGEMENTS_TOTAL
+        description: Sum of all engagement types (attendees + TM calls + email clicks + media clicks).
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "ENGAGEMENTS_TOTAL >= 0"
+              config:
+                where: "ENGAGEMENTS_TOTAL IS NOT NULL"
+
+      - name: ACTUAL_ENGAGEMENTS
+        description: Actual engagements (attendees + TM calls + media clicks; excludes direct email).
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "ACTUAL_ENGAGEMENTS >= 0"
+              config:
+                where: "ACTUAL_ENGAGEMENTS IS NOT NULL"
+
+      - name: EXPECTED_ENGAGEMENTS
+        description: Expected engagements (expected attendees + TM calls + media clicks).
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "EXPECTED_ENGAGEMENTS >= 0"
+              config:
+                where: "EXPECTED_ENGAGEMENTS IS NOT NULL"
+
+      - name: Dashboard_Quarter
+        description: >
+          Bucketed label for Power BI quarter filtering:
+          '1. Current Qtr', '2. Previous Qtr', '3. 3-6 Qtrs Ago', '4. >6 Qtrs Ago', 'Next Qtr'.
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - "1. Current Qtr"
+                - "2. Previous Qtr"
+                - "3. 3-6 Qtrs Ago"
+                - "4. >6 Qtrs Ago"
+                - "Next Qtr"
+                - " "
+
+      - name: SUM_OF_NBR_ATTENDEES
+        description: Number of event attendees (online + live), campaign-split adjusted.
+
+      - name: SUM_OF_NBR_OF_COMPLETED_TM_CALLS
+        description: Number of completed telemarketing calls, campaign-split adjusted.
+
+      - name: SUM_OF_NBR_OF_DIRECT_EMAIL_CLICKS
+        description: Number of direct email clicks, campaign-split adjusted.
+
+      - name: SUM_OF_NBR_OF_ONLINE_MEDIA_CLICKS
+        description: Number of online media clicks, campaign-split adjusted.
+
+      - name: SUM_OF_NBR_OF_ONLINE_MEDIA_IMPRESSIONS
+        description: Number of online media impressions, campaign-split adjusted.
+
+      - name: SUM_OF_EXPECTED_NBR_ATTENDEES
+        description: Expected number of event attendees, campaign-split adjusted.
+
+      - name: SUM_OF_EXPECTED_NBR_OF_COMPLETED_TM_CALLS
+        description: Expected completed TM calls, campaign-split adjusted.
+
+      - name: SUM_OF_EXPECTED_NBR_OF_ONLINE_MEDIA_CLICKS
+        description: Expected online media clicks, campaign-split adjusted.
+
+      - name: SUM_OF_EXPECTED_NBR_OF_ONLINE_MEDIA_IMPRESSIONS
+        description: Expected online media impressions, campaign-split adjusted.
+
+      - name: MQLS
+        description: Raw MQL count from source (before CMM validation).
+
+      - name: TARGET_COUNTRY
+        description: Primary target geography country from activity question responses.
+
+      - name: MARKETING_REGION
+        description: Marketing region from Salesforce country reference data.
+
+      - name: SPEND_TYPE
+        description: Spend type classification.
+
+      - name: C6_10_DAYS_TO_ROI_DEADLINE
+        description: Whether the partner is 6–10 days from the ROI deadline.
+
+      - name: LAST_5_DAYS_TO_ROI_DEADLINE
+        description: Whether the partner is within the last 5 days of the ROI deadline.
+
+      - name: ROI_DEADLINE_OVER
+        description: Whether the ROI deadline has passed.
+
+      - name: ROI_COMPLETED
+        description: Whether ROI documentation was completed.
+
+      - name: GEP_EVENT_ID
+        description: Global event platform event identifier.

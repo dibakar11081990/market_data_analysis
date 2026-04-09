@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: MDP_I360_RAW
+    description: >
+      Bronze layer — raw SFTP ingestion model for Market Data Performance (MDP) 360i pipeline.
+      Combines three SFTP source files: MDP_PLANCLAIMHEADER, MDP_CAMPAIGNS, and MDP_ACTIVITY_QUESTIONS
+      via pivot and join logic. No business transformations applied; data is kept as close to source as possible.
+      Airflow DAG: mdp_360/mdp_i360_new_dag | mdp_i360_new_trg
+    tags:
+      - bronze
+      - market_data_performance
+      - sftp_ingestion
+
+    columns:
+      - name: PLANID
+        description: Unique plan identifier from source SFTP file.
+        tests:
+          - not_null
+      - name: PLANDETAILID
+        description: Plan detail line identifier.
+        tests:
+          - not_null
+      - name: CLAIMNUMBER
+        description: Claim number associated with the plan (may be NULL in source, replaced with 'NULL' string).
+      - name: CLAIMDETAILID
+        description: Claim detail identifier (may be NULL in source).
+      - name: FUNDID
+        description: Fund identifier.
+        tests:
+          - not_null
+      - name: FUNDNAME
+        description: Name of the fund.
+        tests:
+          - not_null
+      - name: CUSTOMERID
+        description: Customer/partner identifier (CSN).
+      - name: CUSTOMERNAME
+        description: Name of the partner/customer.
+      - name: PLANSTATUS
+        description: Current status of the plan.
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - "Approved"
+                - "Approved with Exception"
+                - "Claimed for Payment"
+                - "Draft Claim"
+                - "Paid"
+                - "Routed for Approval"
+                - "Ready for Payment"
+      - name: ACTIVITYBEGINDATE
+        description: Start date of the marketing activity.
+      - name: ACTIVITYENDDATE
+        description: End date of the marketing activity.
+      - name: CAMPAIGN
+        description: Campaign name.
+      - name: PRIMARY_TARGET_GEO
+        description: Primary target geography derived from activity questions (QUESTIONID=1).
+      - name: CLAIMNUMBER_LINK
+        description: Normalised claim number used as a join key (NULL replaced with literal 'NULL').
+        tests:
+          - not_null
+      - name: CLAIMDETAILID_LINK
+        description: Normalised claim detail ID used as a join key (NULL replaced with literal 'NULL').
+        tests:
+          - not_null
+      - name: "CAMPAIGN NAME"
+        description: Campaign name from campaigns SFTP file.
+      - name: "CAMPAIGN PERCENTAGE"
+        description: Decimal campaign percentage (string '%' stripped and cast).
+      - name: ACTIVITY_MQLS_EXPECTED_EXPECTED_NUMBER_OF_MARKETING_QUALIFIED_LEADS
+        description: Expected MQL count from activity questions (QUESTIONID=2).
+      - name: ACTIVITY_MQLS_ACTUAL_ACTUAL_NUMBER_OF_MARKETING_QULIFIED_LEADS
+        description: Actual MQL count from activity questions (QUESTIONID=5).
+      - name: ACTIVITY_CUSTOMER_ENGAGEMENTS_EXPECTED_NUMBER_OF_ONLINE_MEDIA_CLICKS
+        description: Expected online media clicks (QUESTIONID=8).
+      - name: ACTIVITY_CUSTOMER_ENGAGEMENTS_ACTUAL_NUMBER_OF_ONLINE_MEDIA_CLICKS
+        description: Actual online media clicks (QUESTIONID=12).
+      - name: ACTIVITY_CUSTOMER_ENGAGEMENTS_EXPECTED_NUMBER_OF_ONLINE_MEDIA_IMPRESSIONS
+        description: Expected online media impressions (QUESTIONID=16).
+      - name: ACTIVITY_CUSTOMER_ENGAGEMENTS_ACTUAL_NUMBER_OF_ONLINE_MEDIA_IMPRESSIONS
+        description: Actual online media impressions (QUESTIONID=17).
+
+    tests:
+      - dbt_utils.recency:
+          datepart: day
+          field: ACTIVITYENDDATE
+          interval: 90

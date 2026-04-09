@@ -1,0 +1,330 @@
+-- =============================================================================
+-- LAYER  : Silver — Staging
+-- MODEL  : FFM_TRIALS_STAGE (CLM / FFM pipeline stage)
+-- NOTES  : Intermediate staging model; feeds gold fact tables
+-- =============================================================================
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+-- Set the right tag
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+
+{# Set the configuration #}
+
+{{
+    config(
+        materialized='incremental',
+        incremental_strategy='delete+insert',
+        unique_key='ENTITLEMENT_START_DATE'
+    )
+}}
+
+{# Set the Pre Hook configuration #}
+{{
+  config(
+    pre_hook = [
+        "SET START_DATE = (SELECT MAX(ENTITLEMENT_START_DATE) FROM {{ this }});" ,
+        "SET END_DATE   = (SELECT CURRENT_DATE()-1); "
+    ]
+  )
+}}
+
+
+
+-- Set the post pipeline configuration
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_QA"
+    ]
+  )
+}}
+
+WITH EDP AS (
+        select distinct
+                CAST(ENTITLEMENT_START_DATE AS DATE) AS ENTITLEMENT_START_DATE,
+                CAST(ENTITLEMENT_END_DATE AS DATE) AS ENTITLEMENT_END_DATE,
+                ENTITLEMENT_MODEL,
+                OFFERING_PRODUCT_LINE_CODE,
+                PRODUCT_LINE_CODE,
+                OXYGEN_ID,
+                SUBSCRIPTION_ID,
+             --   CONCAT(OXYGEN_ID,'_',PRODUCT_LINE_CODE) TRAIL_ID,
+                datediff(days, ENTITLEMENT_START_DATE, ENTITLEMENT_END_DATE) as trial_period,
+                PRODUCT_VERSION
+            from
+                {{ var('ENTITLEMENT_EDP_OPTIMIZED') }}
+
+            where
+                USAGE_TYPE = 'Trial'
+                AND entitlement_start_date >= $START_DATE
+               AND entitlement_start_date <= $END_DATE
+                ),
+TRAILS_PRODUCT_MAPPING AS
+    (
+           SELECT DISTINCT PRODUCTLINE_CODE AS MAIN_PROD,
+                          PRODUCTLINE_NAME,
+                          FEATURE_EXTERNALKEY,
+                          OFFERING_DESCRIPTION,
+                          FEATURE_NAME,
+                          ACTIVATION_AVAILABLE
+            FROM {{ var('TRIALS_MAP_PRODUCT_FEATURE_CODES') }} WHERE PRODUCT_TYPE = 'BaseProd'
+),
+trials_downloads AS
+(
+    SELECT E.ENTITLEMENT_START_DATE,
+            E.ENTITLEMENT_END_DATE,
+            E.PRODUCT_LINE_CODE,
+            E.OXYGEN_ID,
+            E.SUBSCRIPTION_ID,
+            E.trial_period,
+            E.OFFERING_PRODUCT_LINE_CODE,
+            T.OFFERING_DESCRIPTION,
+            T.ACTIVATION_AVAILABLE,
+            T.PRODUCTLINE_NAME
+    FROM EDP E
+        INNER JOIN TRAILS_PRODUCT_MAPPING T
+            ON E.OFFERING_PRODUCT_LINE_CODE = T.MAIN_PROD
+            AND E.PRODUCT_LINE_CODE = T.FEATURE_EXTERNALKEY
+),
+SUBSCRIPTION AS
+(
+    select
+                OXYGEN_ID,
+                SUBSCRIPTION_ID as SUB_ID,
+                OFFERING_PRODUCT_LINE_CODE as ACTIVATION_PRODUCT_LINE_CODE,
+                PRODUCT_LINE_CODE,
+                MIN (AUTHORIZATION_REQUEST_TIMESTAMP) as ACTIVATION_DATE,
+                Max (product_version) as product_version
+                from
+                 ADP_PUBLISH.LICENSE_AUTHORIZATION_USAGE_OPTIMIZED.SUBSCRIPTION_AUTHORIZATION_CONFORMED   -- activation
+                where
+                        DT > '2021-01-31'
+                         and USAGE_TYPE = 'Trial'
+                        and EVENT_STATUS = 'TRUE'
+                group by 1, 2,  3, 4
+),
+MAP_TRAIL_DL_W_SUBSCRIPTION  AS
+(
+    SELECT
+           TRLS.SUBSCRIPTION_ID AS SUB_ID_DOWNLOAD,
+           SUB.SUB_ID AS SUB_ID_ACTIVATION,
+           CONCAT(SUB.OXYGEN_ID,'_',SUB.PRODUCT_LINE_CODE) as ACTIVATION_TRIAL_ID,
+           CONCAT(TRLS.OXYGEN_ID,'_',TRLS.PRODUCT_LINE_CODE) AS DOWNLOAD_TRIAL_ID,
+
+           SUB.OXYGEN_ID AS ACTIVATION_OXYGEN_ID,
+           TRLS.OXYGEN_ID AS TRAIL_DOWNLOAD_OXYGEN_ID,
+           CASE WHEN TRAIL_DOWNLOAD_OXYGEN_ID = ACTIVATION_OXYGEN_ID THEN TRUE ELSE FALSE END AS IS_VALID_ACTIVATION,
+
+           SUB.ACTIVATION_PRODUCT_LINE_CODE,
+           TRLS.PRODUCT_LINE_CODE AS PRODUCT_LINE_CODE,
+           SUB.PRODUCT_LINE_CODE AS SUB_PRODUCT_LINE_CODE,
+
+           TRLS.OFFERING_DESCRIPTION,
+           ENTITLEMENT_START_DATE,
+           ENTITLEMENT_END_DATE,
+           TRLS.TRIAL_PERIOD,
+           TRLS.OFFERING_PRODUCT_LINE_CODE AS OFFERING_PRODUCT_LINE_CODE,
+           TRLS.PRODUCTLINE_NAME,
+
+           CAST(
+                 CASE WHEN SUB.ACTIVATION_DATE IS NULL AND TRLS.ACTIVATION_AVAILABLE = FALSE
+                     AND UPPER(offering_description) LIKE '%CLOUD%' THEN TRLS.entitlement_start_date
+                 ELSE SUB.activation_date
+                 END AS Date) as ACTIVATION_DATE,
+
+           DENSE_RANK() OVER (
+                                partition by TRLS.oxygen_id,
+                                             TRLS.OFFERING_PRODUCT_LINE_CODE,
+                                             TRLS.product_line_code,
+                                             TRLS.ENTITLEMENT_START_DATE,
+                                             TRLS.ENTITLEMENT_END_DATE
+                                ORDER BY is_Valid_activation DESC,
+                                          ACTIVATION_DATE ASC,
+                                          subscription_id DESC
+                            ) as downloads_rank,
+            CASE WHEN downloads_rank = 1 THEN TRUE ELSE FALSE END as IS_VALID_DOWNLOAD
+
+    FROM trials_downloads TRLS
+    LEFT JOIN SUBSCRIPTION SUB
+           ON TRLS.SUBSCRIPTION_ID = SUB.SUB_ID
+           AND TRLS.OFFERING_PRODUCT_LINE_CODE = SUB.ACTIVATION_PRODUCT_LINE_CODE
+           AND TRLS.PRODUCT_LINE_CODE = SUB.PRODUCT_LINE_CODE
+           AND SUB.ACTIVATION_DATE <= TRLS.ENTITLEMENT_END_DATE
+           AND SUB.ACTIVATION_DATE >=TRLS.ENTITLEMENT_START_DATE
+
+),
+DATE_DETAILS AS
+(
+    SELECT
+    DATE_KEY
+    , WEEK_NUMBER_FISCAL_QUARTER FYWEEK
+    , MONTH_NUMBER_IN_FISCAL_YEAR FYMONTH
+    , FISCAL_YEAR_AND_FISCAL_QUARTER_NAME FYQUARTER
+    , FISCAL_YEAR_NAME FYYEAR
+    FROM {{ ref('FFM_FIN_CALENDAR') }}
+   WHERE DATE_KEY >='2021-01-31'
+),
+ACCT_CSN AS (
+    SELECT  OXYGEN_ID, ACCOUNT_CSN
+    FROM {{ var('CORE_CONTACT') }}
+    WHERE OXYGEN_ID IS NOT NULL AND ACCOUNT_CSN IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER(PARTITION BY OXYGEN_ID ORDER BY LAST_UPDATED_TIMESTAMP DESC) = 1
+),
+
+PERSON AS (
+     select distinct oxygen_id as o2_id,
+            MAX(coalesce(c1.standard_country, c2.standard_country)) as country,
+            MAX(coalesce(c1.geo, c2.geo)) as geo
+            from
+            (
+             SELECT DISTINCT
+                    oxygen_id,
+                    PROFILE_COUNTRY_NAME,
+                    country_name,
+                FROM ADP_WORKSPACES.CORE_ENTERPRISE_DATA_SHARED.PERSON
+                where oxygen_id is not null
+                and coalesce(PROFILE_COUNTRY_NAME,  country_name) is not null
+            )p
+            LEFT JOIN (select distinct standard_country, downloads_country, geo  from ADP_WORKSPACES.DEC_ANALYTICS_SHARED.TRIALS_MAP_COUNTRY_STANDARDS) c1
+                ON p.PROFILE_COUNTRY_NAME = c1.downloads_country
+            LEFT JOIN (select distinct standard_country, ucm_country, geo  from ADP_WORKSPACES.DEC_ANALYTICS_SHARED.TRIALS_MAP_COUNTRY_STANDARDS) c2
+                ON upper(p.country_name) = UPPER(c2.ucm_country)
+            group by 1
+    ),
+FINMART_DEC AS
+(
+      SELECT
+        ECC_SALES_ORDER_NBR,
+        CC_FBM_TOTAL_ACV_NET3_CC,
+        CASE
+            WHEN PELICAN_SUBSCRIPTION_ID = '963769' AND  CORPORATE_CSN<> '5138666375' then SUBSCRIPTION_ID
+            WHEN PELICAN_SUBSCRIPTION_ID = '*' THEN SUBSCRIPTION_ID
+            ELSE PELICAN_SUBSCRIPTION_ID
+        END AS COMBINED_SUBSCRIPTION_ID,
+        CASE
+            WHEN FIN.OXYGEN_ID = '*' AND H.OXYGEN_ID__C IS NULL THEN I.OWNEREXTERNALKEY
+            WHEN FIN.OXYGEN_ID = '*' AND H.OXYGEN_ID__C IS NOT NULL THEN H.OXYGEN_ID__C
+        ELSE FIN.OXYGEN_ID END AS OXYGEN_ID,
+       -- CASE WHEN CORPORATE_PARENT_ACCOUNT_CSN <> '*' THEN CORPORATE_PARENT_ACCOUNT_CSN END CORPORATE_PARENT_ACCOUNT_CSN,
+       CASE
+            WHEN CORPORATE_PARENT_ACCOUNT_CSN   <> 'UNKNOWN' THEN CORPORATE_PARENT_ACCOUNT_CSN
+            WHEN CORPORATE_PARENT_ACCOUNT_CSN  = 'UNKNOWN' THEN CORPORATE_CSN
+       END  AS ACCOUNT_CSN,
+        CASE WHEN CORPORATE_NAMED_ACCOUNT_GROUP_NM <>'*' THEN CORPORATE_NAMED_ACCOUNT_GROUP_NM END CORPORATE_NAMED_ACCOUNT_GROUP_NM,
+        CASE WHEN SAP_PRODUCT_LINE <>'*' THEN SAP_PRODUCT_LINE END SAP_PRODUCT_LINE,
+        CASE WHEN UPPER(CC_FBD_SF_WWS_GEO) LIKE 'APAC%' THEN 'APAC' ELSE UPPER(CC_FBD_SF_WWS_GEO) END AS  WWS_GEO,        -- Rename APAC excl. Japan as APAC
+        CASE WHEN CORPORATE_CSN <> '*' THEN CORPORATE_CSN END CORPORATE_CSN,
+        CORPORATE_COUNTRY_NM AS  COUNTRY,
+        CORPORATE_COUNTRY_CD AS CORPORATE_COUNTRY_CD,
+        CC_FBD_SF_BIL_TERM_SETL AS TERM,
+        CC_FBD_BSM_SALES_CH AS SALES_CHANNEL,
+        CC_FBD_SF_FOX_RENEWAL_IND,
+        TRANSACTION_DT AS ORDER_DT,
+        LAST_UPDATED_DT
+     FROM {{ var('FINMART_PRIVATE_DATA') }} FIN
+     LEFT JOIN
+     (
+        SELECT DISTINCT * FROM (
+            SELECT F.*,G.* FROM (SELECT DISTINCT ORDERNUMBER__C,CONTACT__C FROM BSD_PUBLISH.SFDC_SHARED.ORDER__C) F
+                            INNER JOIN (SELECT DISTINCT OXYGEN_ID__C,ID FROM {{ var('CONTACT') }}) G
+                             ON F.CONTACT__C = G.ID )
+     ) H ON FIN.ECC_SALES_ORDER_NBR = H.ORDERNUMBER__C
+     LEFT JOIN
+            (SELECT DISTINCT OWNEREXTERNALKEY, TO_VARCHAR (ID) AS ID
+                FROM ADP_PUBLISH.ENTITLEMENT_PUBLIC.SUBSCRIPTION_PELICAN
+            ) I
+     ON I.ID = COMBINED_SUBSCRIPTION_ID
+  WHERE
+  UPPER(RECORD_TYPE) IN ('BILLING', 'BOOKING_BILLING') AND TRANSACTION_DT>='2021-01-01'
+
+),
+FINMART AS
+(
+    SELECT DISTINCT OXYGEN_ID,ACCOUNT_CSN,CORPORATE_NAMED_ACCOUNT_GROUP_NM,WWS_GEO,
+    COUNTRY,CORPORATE_COUNTRY_CD,ORDER_DT
+    FROM FINMART_DEC
+     --LEFT JOIN RAW.LOOKUPS.NAG_REPLACEMENT_MAPPING NR ON d.NAMED_ACCOUNT_GROUP = NR.NAG
+    WHERE CC_FBD_SF_FOX_RENEWAL_IND ='New' AND OXYGEN_ID IS NOT NULL
+    AND CC_FBM_TOTAL_ACV_NET3_CC > 0
+    QUALIFY ROW_NUMBER() OVER(PARTITION BY OXYGEN_ID ORDER BY ORDER_DT DESC) = 1
+),
+TRAIL_ACTIVATION_W_DIM AS
+(
+       SELECT DISTINCT SUB.*,
+       PROD.PRODUCT,
+       PROD.PRODUCT_FAMILY,
+       PROD.PRODUCT_INDUSTRY,
+
+       COALESCE(FIN.ACCOUNT_CSN,ACC.ACCOUNT_CSN__C) AS ACCOUNT_CSN,
+       COALESCE(FIN.CORPORATE_NAMED_ACCOUNT_GROUP_NM,ACC.NAMED_ACCOUNT_GROUP__C) AS NAMED_ACCOUNT_GROUP ,
+
+
+       DT.FYWEEK AS FYWEEK_ACT_TRIALS,
+       DT.FYMONTH AS FYMONTH_TRIAL_ACT,
+       DT.FYYEAR AS FYYEAR_TRIAL_ACT,
+       DT.FYQUARTER AS FYQUARTER_TRIAL_ACT,
+
+       DT2.FYWEEK AS FYWEEK_DL_TRIALS,
+       DT2.FYMONTH AS FYMONTH_DL_TRIALS,
+       DT2.FYYEAR AS FYYEAR_DL_TRIALS,
+       DT2.FYQUARTER AS FYQUARTER_DL_TRIALS,
+
+       COALESCE(FIN.COUNTRY,P.COUNTRY) AS COUNTRY,
+       -- Rename APAC excl. Japan as APAC
+       CASE WHEN UPPER(COALESCE(FIN.WWS_GEO,P.GEO)) LIKE 'APAC%' THEN 'APAC' ELSE UPPER(COALESCE(FIN.WWS_GEO,P.GEO)) END AS GEO,
+       COALESCE(CTR3.GDPR_FLAG,GDPR.GDPR_FLAG, 'NON-GDPR') AS GDPR_FLAG
+      --COALESCE(FIN.COUNTRY, CTR2.COUNTRY,CTR.COUNTRY) AS COUNTRY,
+       --COALESCE(FIN.GEO,CTR2.GEO,CTR.GEO) AS GEO,
+
+       --COALESCE(CTR3.GDPR_FLAG,CTR2.GDPR_FLAG,CTR.GDPR_FLAG, 'NON-GDPR') AS GDPR_FLAG
+
+       FROM MAP_TRAIL_DL_W_SUBSCRIPTION SUB
+       LEFT JOIN DATE_DETAILS DT
+       ON SUB.ACTIVATION_DATE = DT.DATE_KEY
+
+       LEFT JOIN DATE_DETAILS DT2
+       ON SUB.ENTITLEMENT_START_DATE = DT2.DATE_KEY
+
+       LEFT JOIN {{ ref('LOOKUP_MPM_PRODUCT_CODE_TO_PRODUCT') }}  PROD
+       ON SUB.OFFERING_PRODUCT_LINE_CODE = PROD.CODE
+
+       LEFT JOIN ACCT_CSN OXY
+       ON SUB.TRAIL_DOWNLOAD_OXYGEN_ID = OXY.OXYGEN_ID
+
+       LEFT JOIN 
+       --{{ var('ACCOUNT_SFDC_RAW') }} ACC
+       RAW.ADP.ACCOUNT_NAG ACC
+       ON OXY.ACCOUNT_CSN = ACC.ACCOUNT_CSN__C
+
+   --    LEFT JOIN ADOBE_ENRICHED WEB
+   --    ON SUB.TRAIL_DOWNLOAD_OXYGEN_ID = WEB.OXYGEN_ID
+
+   --    LEFT JOIN {{ ref('DIM_FFM_COUNTRY_VW') }} CTR
+    --   ON LOWER(WEB.GEO_COUNTRY_CODE) = LOWER(CTR.COUNTRY_SEARCH_CODE)
+
+     --  LEFT JOIN PERSON P
+    --   ON SUB.TRAIL_DOWNLOAD_OXYGEN_ID = P.OXYGEN_ID
+
+    --   LEFT JOIN {{ ref('DIM_FFM_COUNTRY_VW') }} CTR2
+     --  ON LOWER(P.COUNTRY_CODE) = LOWER(CTR2.COUNTRY_SEARCH_CODE)
+
+     LEFT JOIN PERSON P
+     ON SUB.TRAIL_DOWNLOAD_OXYGEN_ID = P.O2_ID
+
+     LEFT JOIN {{ ref('DIM_FFM_COUNTRY_VW') }} GDPR
+     ON UPPER(P.COUNTRY) = UPPER(GDPR.Country)
+
+       LEFT JOIN FINMART fin
+       ON SUB.TRAIL_DOWNLOAD_OXYGEN_ID = FIN.OXYGEN_ID
+       AND FIN.ORDER_DT >= SUB.ACTIVATION_DATE
+       AND FIN.ORDER_DT<= SUB.ENTITLEMENT_START_DATE +90
+       LEFT JOIN {{ ref('DIM_FFM_COUNTRY_VW') }} CTR3
+       ON LOWER(FIN.CORPORATE_COUNTRY_CD) = LOWER(CTR3.COUNTRY_SEARCH_CODE)
+
+)
+SELECT * FROM TRAIL_ACTIVATION_W_DIM

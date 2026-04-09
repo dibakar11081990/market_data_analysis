@@ -1,0 +1,165 @@
+/* USED FOR ASTRONOMER DEVELOPMENT DEPLOYMENT */
+
+// uses https://git.tredence_analytics.com/Pipeline-Community/PSL/pull/824/files
+@Library(['PSL@LKG']) _
+
+def artifactName = ''
+pipeline {
+    agent {
+        label "aws-centos"
+    }
+
+    parameters {
+        string(
+            name: 'branch',
+            description: 'The name of the branch you want to deploy. Master branch is not allowed',
+            defaultValue: 'ADPTS-14300'
+        )
+        string(
+            name: 'release_name',
+            description: "The Astronomer release name (deployment name), found in the Astronomer UI. For example 'marketing-data-analytics-master'",
+            defaultValue: "marketing-data-analytics-master"
+        )
+    }
+
+    environment {
+        CREDENTIALS="svc_aad_d_adp_infra_jenkins"
+        VAULT="account/058234065395/sts/Deployer"
+        UPGRADE_SCRIPT_LOC="s3://com.tredence_analytics.dev.us-east-1.blk/astronomer/scripts/upgrade_airflow_latest.sh"
+        ASTRO_DEV_REGISTRY='registry.astro-dev.tredence_analytics.com'
+        ASTRO_RELEASE_NAME="${params.release_name}"
+        ASTRO_DEPLOYMENT_ID=getDeploymentId(ASTRO_RELEASE_NAME)
+        ASTRO_SERVICE_ACCOUNT_NAME='svc_d_marketing-data-analytics'
+        BUILD_NUMBER="${currentBuild.number}"
+        S3_DEV_BUCKET='com.tredence_analytics.dev.us-east-1.blk'
+        TEAM_DOMAIN='tredence_analytics'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        copyArtifactPermission('*')
+        skipStagesAfterUnstable()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Pre-build') {
+
+            stages {
+                stage('Checkout') {
+                    steps {
+                        script {
+                            // Restrict deployments to be only from feature branches
+                            if ("${BRANCH}" == 'master'){
+                                currentBuild.result = 'ABORTED'
+                                error('Aborting: MASTER BRANCH IS NOT ALLOWED')
+                            }
+                        }
+
+                        script {
+                            checkout([$class: 'GitSCM',
+                                branches: [[name: params.branch]],
+                                userRemoteConfigs: [[credentialsId: 'ors_git_service_account', url: scm.getUserRemoteConfigs()[0].getUrl()]]
+                            ])
+                        }
+                    }
+                }
+
+                stage('Bundle Artifacts'){
+                    steps {
+                        script {
+                            def commitShortHash = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                            artifactName = "artifacts-${commitShortHash}-${BUILD_NUMBER}.tgz"
+                            createArtifactFromRepo(artifactName)
+                        }
+                    }
+                    post {
+                        success {
+                            archiveArtifacts artifacts: "${artifactName}", fingerprint: true
+                            stash includes: "${artifactName}", name: 'artifact'
+                        }
+                    }
+                }
+            }
+
+            post {
+                always() {
+                    deleteDir()
+                }
+            }
+        }
+
+        stage('DEV Deployment') {
+
+            options {
+                skipDefaultCheckout()
+            }
+
+            stages {
+                stage('Pull Artifact to DEV') {
+                    steps {
+                        sh "sudo rm -rf *"
+                        unstash 'artifact'
+                        sh "tar -zxvf ${artifactName}"
+                    }
+                }
+
+                stage('Deploy') {
+                    steps {
+                        echo "Deploying to DEV"
+                        script {
+                            // Retrieve temporary STS token via Vault PSL
+                            def commonVault = new ors.utils.common_vault(steps, env, docker)
+                            commonVault.get_aws_credentials("${CREDENTIALS}", "${VAULT}", 'us-east-1', '30m')
+                            deployAirflowImage(env.ASTRO_DEV_REGISTRY, env.ASTRO_SERVICE_ACCOUNT_NAME)
+                        }
+                        echo "Pushing ${artifactName} to filestore"
+                        pushArtifactToS3(artifactName)
+                        sh "rm ${artifactName}"
+                    }
+                }
+            }
+        }
+    }
+}
+
+def createArtifactFromRepo(String artifactName) {
+    withEnv(["TARFILE_NAME=${artifactName}"]) {
+        sh '''
+        touch ${TARFILE_NAME}
+        tar zcvf ${TARFILE_NAME} --exclude='.git' --exclude='.astro' --exclude=${TARFILE_NAME} .
+        '''
+    }
+}
+
+def deployAirflowImage(String registryURL, String registryCredentialID) {
+    withCredentials([string(credentialsId: "${registryCredentialID}", variable: 'astronomerServiceAccountKey')]) {
+        sh "aws s3 cp ${UPGRADE_SCRIPT_LOC} ."
+        sh "chmod +x upgrade_airflow_latest.sh"
+        sh "./upgrade_airflow_latest.sh ${ASTRO_DEPLOYMENT_ID} ${astronomerServiceAccountKey} dev"
+        sh "docker build -t ${registryURL}/${ASTRO_RELEASE_NAME}/airflow:ci-${BUILD_NUMBER} ."
+        sh "docker login ${registryURL} -u _ -p ${astronomerServiceAccountKey}"
+        sh "docker push ${registryURL}/${ASTRO_RELEASE_NAME}/airflow:ci-${BUILD_NUMBER}"
+    }
+}
+
+def pushArtifactToS3(String artifactName) {
+    s3Upload(
+        acl: 'Private',
+        bucket: "${env.S3_DEV_BUCKET}",
+        cacheControl: '', excludePathPattern: '',
+        file: "${artifactName}",
+        metadatas: [''],
+        path: "astronomer/artifacts/${ASTRO_RELEASE_NAME}/",
+        sseAlgorithm: '',
+        workingDir: ''
+    )
+}
+
+def getDeploymentId(deploymentName) {
+    def deploymentMap = [
+        "marketing-data-analytics-master" : "cm7whknby89336617n7rp0u40ex"
+    ]
+
+    return deploymentMap[deploymentName]
+}

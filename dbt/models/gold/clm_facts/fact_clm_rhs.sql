@@ -1,0 +1,106 @@
+-- =============================================================================
+-- LAYER  : Gold — Business Fact
+-- MODEL  : fact_clm_rhs
+-- NOTES  : CLM gold fact; var() references preserved — convert to source() as sources.yml is expanded
+-- =============================================================================
+
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('ffm') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+{# Set the right tag #}
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+{# Set the Pre Hook configuration #}
+{{
+  config(
+    pre_hook = [
+        "SET START_DATE = (SELECT DATE_TRUNC(MONTH, DATEADD(MONTH,-16,CURRENT_DATE()))); ",
+        "SET END_DATE   = (SELECT CURRENT_DATE()-1); "
+    ]
+  )
+}}
+
+{# Set the Post Hook configuration #}
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_CJO_READONLY",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST"
+    ]
+  )
+}}
+
+
+WITH DATE_TIME_HIERARCHY AS
+(
+    SELECT DISTINCT DATE_KEY AS CALENDAR_DATE
+      , WEEK_NUMBER_FISCAL_QUARTER
+      , MONTH_NUMBER_IN_FISCAL_YEAR
+      , MONTH_AND_FISCAL_YEAR_NAME
+      , MONTH_AND_CURRENT_YEAR_NAME
+      , FISCAL_YEAR_AND_FISCAL_QUARTER_NAME
+      , FISCAL_YEAR_NAME
+    FROM {{ ref('DIM_CLM_DATETIME') }}
+),
+
+RHS_SCORE_SOURCE_RAW AS
+(
+  SELECT DISTINCT COALESCE(NVL(D.ACCOUNT_CSN__C::VARCHAR, ''), NVL(E.ACCOUNT_CSN__C::VARCHAR, ''), NVL(A.CORPORATE_CSN::VARCHAR, '')) AS ACCOUNT_CSN
+    , A.PRODUCT_LINE_CD
+    , A.EVAL_DATE
+    , A.RHS_SCORE
+    , CAL.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME AS PERIOD
+    , DENSE_RANK() OVER(PARTITION BY COALESCE(NVL(D.ACCOUNT_CSN__C::VARCHAR, ''), NVL(E.ACCOUNT_CSN__C::VARCHAR, ''), NVL(A.CORPORATE_CSN::VARCHAR, '')), A.EVAL_DATE ORDER BY A.SCORED_DATE DESC NULLS LAST) RNK
+  FROM {{ var('RHS_SCORES') }} A
+  LEFT JOIN {{ var('ACCOUNT_SFDC_RAW') }} D
+    ON A.CORPORATE_CSN = D.ACCOUNT_CSN__C
+  LEFT JOIN {{ var('EDH_SHARED_HISTORY.ACCOUNT') }} C
+    ON A.CORPORATE_CSN = C.ACCOUNT_CSN
+  LEFT JOIN {{ var('ACCOUNT_SFDC_RAW') }} E
+    ON C.SURVIVING_ACCOUNT_CSN = E.ACCOUNT_CSN__C
+  LEFT JOIN DATE_TIME_HIERARCHY CAL
+    ON A.EVAL_DATE = CAL.CALENDAR_DATE
+  WHERE EVAL_DATE BETWEEN TO_DATE($START_DATE) AND TO_DATE($END_DATE)
+  AND A.PRODUCT_LINE_CD NOT IN ('BIMCOLL', 'BLDUNLT', 'B36FP', 'QNTFY', 'ATOSPCS', 'BIM360C', 'BLD550', 'BM36PP', 'BM36DP', 'DOCS', 'COLLRP', 'BLD5K')
+  QUALIFY RNK=1
+),
+
+RHS_SCORE_SOURCE AS
+(
+  SELECT DISTINCT ACCOUNT_CSN
+    , A.PRODUCT_LINE_CD
+    , A.PERIOD
+    , AVG(A.RHS_SCORE) AS RHS_SCORE
+  FROM RHS_SCORE_SOURCE_RAW A
+  GROUP BY ALL
+),
+
+TEST_CONTROL AS
+(
+  SELECT DISTINCT COALESCE(NVL(D.ACCOUNT_CSN__C::VARCHAR, ''), NVL(E.ACCOUNT_CSN__C::VARCHAR, ''), NVL(A.ACCOUNT_CSN__C::VARCHAR, '')) AS ACCOUNT_CSN
+  FROM {{ var('ILM_ACCOUNTS') }} A
+  LEFT JOIN {{ var('ACCOUNT_SFDC_RAW') }} D
+    ON A.ACCOUNT_CSN__C = D.ACCOUNT_CSN__C
+  LEFT JOIN {{ var('EDH_SHARED_HISTORY.ACCOUNT') }} C
+    ON A.ACCOUNT_CSN__C = C.ACCOUNT_CSN
+  LEFT JOIN {{ var('ACCOUNT_SFDC_RAW') }} E
+    ON C.SURVIVING_ACCOUNT_CSN = E.ACCOUNT_CSN__C
+  WHERE SEMI_RANDOM_DIGIT= 1
+)
+
+
+SELECT DISTINCT A.ACCOUNT_CSN::VARCHAR AS ACCOUNT_CSN
+  , A.PRODUCT_LINE_CD
+  , CASE WHEN TC.ACCOUNT_CSN IS NOT NULL THEN 'Control' ELSE 'Test' END AS TEST_CONTROL_FLAG
+  , A.PERIOD
+  , A.RHS_SCORE
+
+FROM RHS_SCORE_SOURCE A
+LEFT JOIN TEST_CONTROL TC
+    ON A.ACCOUNT_CSN = TC.ACCOUNT_CSN
+WHERE NVL(A.ACCOUNT_CSN::VARCHAR, '') != ''
+

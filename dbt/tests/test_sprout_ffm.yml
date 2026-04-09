@@ -1,0 +1,387 @@
+version: 2
+
+# =============================================================================
+# dbt Test Cases — Medallion Architecture
+# Covers: Bronze (stg_), Silver (dim_), Gold (fact_) models
+# =============================================================================
+
+models:
+
+  # ─────────────────────────────────────────────────────────────────────
+  # BRONZE — Sprout Raw Ingestion
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: stg_sprout_customer_data
+    description: "Bronze: Raw Sprout customer profile data incrementally ingested from RAW.SPROUT.CUSTOMER_DATA"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        description: "Unique customer profile identifier"
+        tests:
+          - not_null
+      - name: NATIVE_ID
+        description: "Platform-native profile ID"
+        tests:
+          - not_null
+      - name: GROUPS
+        tests:
+          - not_null
+      - name: INGESTION_TIMESTAMP
+        description: "Timestamp when the record was ingested"
+        tests:
+          - not_null
+    tests:
+      - unique:
+          column_name: "(CUSTOMER_PROFILE_ID || '|' || NATIVE_ID || '|' || GROUPS)"
+
+  - name: stg_sprout_twitter_post_data
+    description: "Bronze: Twitter post metrics from RAW.SPROUT.TWITTER_POST_DATA"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+      - name: INGESTION_TIMESTAMP
+        tests: [not_null]
+      - name: NETWORK
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['TWITTER', 'twitter', 'X']
+
+  - name: stg_sprout_facebook_post_data
+    description: "Bronze: Facebook post metrics from RAW.SPROUT.FACEBOOK_POST_DATA"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+      - name: INGESTION_TIMESTAMP
+        tests: [not_null]
+
+  - name: stg_sprout_instagram_post_data
+    description: "Bronze: Instagram post metrics from RAW.SPROUT.INSTAGRAM_POST_DATA"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+
+  - name: stg_sprout_linkedin_post_data
+    description: "Bronze: LinkedIn post metrics from RAW.SPROUT.LINKEDIN_POST_DATA"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+
+  - name: stg_sprout_youtube_post_data
+    description: "Bronze: YouTube post metrics"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+
+  - name: stg_sprout_tiktok_post_data
+    description: "Bronze: TikTok post metrics"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+
+  - name: stg_sprout_twitter_profile_data
+    description: "Bronze: Twitter profile-level daily metrics"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+    tests:
+      - unique:
+          column_name: "(CUSTOMER_PROFILE_ID || '|' || REPORTING_PERIOD_DAY::VARCHAR)"
+
+  - name: stg_sprout_facebook_profile_data
+    description: "Bronze: Facebook profile-level daily metrics"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+    tests:
+      - unique:
+          column_name: "(CUSTOMER_PROFILE_ID || '|' || REPORTING_PERIOD_DAY::VARCHAR)"
+
+  - name: stg_sprout_instagram_profile_data
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+
+  - name: stg_sprout_linkedin_profile_data
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+
+  - name: stg_sprout_youtube_profile_data
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+
+  - name: stg_sprout_tiktok_profile_data
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # SILVER — Sprout Staging Dimensions
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: dim_sprout_customer
+    description: "Silver: Deduplicated Sprout customer dimension"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests:
+          - not_null
+          - unique
+      - name: NAME
+        tests: [not_null]
+      - name: LATEST_INGESTION_TIMESTAMP
+        tests: [not_null]
+
+  - name: dim_sprout_date_hierarchy
+    description: "Silver: Fiscal calendar dimension from ADP_PUBLISH.COMMON_REFERENCE_DATA_OPTIMIZED"
+    columns:
+      - name: CALENDAR_DATE
+        tests:
+          - not_null
+          - unique
+      - name: FISCAL_YEAR_NUMBER
+        tests: [not_null]
+      - name: FISCAL_YEAR_QUARTER_NAME
+        tests: [not_null]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # SILVER — FFM / CLM Staging
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: dim_clm_datetime
+    description: "Silver: Finance calendar dimension (EDH_PUBLISH.EDH_SHARED.FINANCE_CALENDAR)"
+    columns:
+      - name: DATE_KEY
+        tests:
+          - not_null
+          - unique
+      - name: FISCAL_YEAR_NAME
+        tests: [not_null]
+
+  - name: dim_clm_account_attributions
+    description: "Silver: Account attribution dimension — AOV bands, geography, industry"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: PARENT_ACCOUNT_CSN
+        tests: [not_null]
+      - name: GEO
+        tests: [not_null]
+      - name: REGION
+        tests: [not_null]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # GOLD — Sprout Facts
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: fact_sprout_post_data
+    description: "Gold: Union of all platform post metrics with fiscal calendar enrichment"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: CREATED_TIME
+        tests: [not_null]
+      - name: NETWORK
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'YOUTUBE', 'TIKTOK', 'X']
+      - name: FISCAL_YEAR_NUMBER
+        tests: [not_null]
+      - name: IMPRESSIONS
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: CLICKS
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: REACTIONS
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: fact_sprout_profile_data
+    description: "Gold: Union of all platform profile-level daily metrics"
+    columns:
+      - name: SOURCE
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['TWITTER', 'FACEBOOK', 'INSTAGRAM', 'LINKEDIN', 'YOUTUBE', 'TIKTOK']
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: REPORTING_PERIOD_DAY
+        tests: [not_null]
+      - name: IMPRESSIONS
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: VIDEO_VIEWS
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: fact_brand_sprout_post_data
+    description: "Gold: Brand-tagged Sprout posts with campaign mapping and engagement totals"
+    columns:
+      - name: CUSTOMER_PROFILE_ID
+        tests: [not_null]
+      - name: BRAND_TAGS
+        tests: [not_null]
+      - name: ENGAGEMENTS
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: FISCAL_YEAR_NUMBER
+        tests: [not_null]
+
+  # ─────────────────────────────────────────────────────────────────────
+  # GOLD — CLM Facts
+  # ─────────────────────────────────────────────────────────────────────
+
+  - name: fact_clm_seat_rate
+    description: "Gold: CLM seat utilisation rate per account, product line, and campaign"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: TENANT_ID
+        tests: [not_null]
+      - name: OFFERING_PRODUCT_LINE_CODE
+        tests: [not_null]
+      - name: SEATS_PURCHASED
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: SEATS_ASSIGNED
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: SEATS_USED
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: TEST_CONTROL_FLAG
+        tests:
+          - accepted_values:
+              values: ['Test', 'Control']
+
+  - name: fact_clm_seat_rate_stage
+    description: "Silver: Staging for CLM seat rate — feeds fact_clm_seat_rate"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: ENTITLEMENT_START_DATE
+        tests: [not_null]
+
+  - name: fact_clm_renewal_rate
+    description: "Gold: CLM renewal rate metrics by account and fiscal quarter"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: PERIOD
+        tests: [not_null]
+      - name: NON_ADJ_RR_NET3_CC
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1.5  # renewal rates above 150% indicate data quality issues
+      - name: TEST_CONTROL_FLAG
+        tests:
+          - accepted_values:
+              values: ['Test', 'Control']
+
+  - name: fact_clm_active_users
+    description: "Gold: Monthly active users per account, product, and CMT campaign"
+    columns:
+      - name: PRODUCT_LINE_CODE
+        tests: [not_null]
+      - name: MAU
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: fact_clm_avg_time_to_use
+    description: "Gold: Average days from seat assignment to first product usage"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: AVG_TIME_TO_USE_DAYS
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 730  # >2 years would be anomalous
+
+  - name: fact_clm_nr3_aov
+    description: "Gold: Year-over-year Net Revenue 3 Average Order Value per account"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: FY_YEAR
+        tests: [not_null]
+      - name: YRLY_N3
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: fact_clm_rhs
+    description: "Gold: Renewal Health Score per account, product, and quarter"
+    columns:
+      - name: ACCOUNT_CSN
+        tests: [not_null]
+      - name: PRODUCT_LINE_CD
+        tests: [not_null]
+      - name: RHS_SCORE
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+  - name: clm_extend_renewals
+    description: "Gold: Renewal metrics with test/control segmentation (EoQ snapshot)"
+    columns:
+      - name: CORPORATE_PARENT_ACCOUNT_CSN
+        tests: [not_null]
+      - name: SEATS_RENEWAL_RATE
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: clm_seat_download_rate
+    description: "Gold: Seat download rates filtered to install events (manage page)"
+    columns:
+      - name: OXYGEN_ID
+        tests: [not_null]
+      - name: PRODUCT_LINE_CODE
+        tests: [not_null]

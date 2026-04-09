@@ -1,0 +1,169 @@
+-- =============================================================================
+-- LAYER  : Gold — Business Fact
+-- SUBFOLDER: lower_funnel
+-- MODEL  : fact_ffm_total_acv_daily
+-- =============================================================================
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+{# Set the right tag #}
+{{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }}
+
+{# Set the post pipeline configuration #}
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_QA"
+    ]
+  )
+}}
+
+WITH WEEK_CAL AS (
+    SELECT
+        DISTINCT
+        FISCAL_YEAR_AND_FISCAL_QUARTER_NAME,
+        WEEK_NUMBER_FISCAL_QUARTER,
+        DATE_TRUNC('MONTH', WEEK_START_DATE) AS MONTH_START_DATE,
+        WEEK_START_DATE,
+        MIN(MONTH_NUMBER_IN_FISCAL_YEAR) OVER(PARTITION BY FISCAL_YEAR_AND_FISCAL_QUARTER_NAME, WEEK_NUMBER_FISCAL_QUARTER) AS MONTH_NUMBER_IN_FISCAL_YEAR, -- To get month of week start. Since a week can week can overlap two months, there would be two records for the same week.
+        FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER
+    FROM
+        {{ ref('FFM_FIN_CALENDAR') }}
+    WHERE
+        FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER >= -12 --Limits from last 12 completed quarters till last completed week of current quarter
+),
+-- Finmart Integrated & ACS Core data at date granularity
+FIN_INT_ACS AS ( 
+    SELECT DISTINCT
+        FIN.FIN_SRC_ID,
+        FIN.FIN_ECC_SALES_ORDER_NBR AS ECC_SALES_ORDER_NBR,
+        FIN.FIN_TRANSACTION_DT AS TRANSACTION_DT,
+        CAL.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME,
+        CAL.MONTH_NUMBER_IN_FISCAL_YEAR,
+        CAL.WEEK_NUMBER_FISCAL_QUARTER,
+        CAL.FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER,
+        DATE_TRUNC('MONTH', CAL.WEEK_START_DATE) AS MONTH_START_DATE,
+        CAL.WEEK_START_DATE,
+        FIN.FIN_CAMPAIGN_INDUSTRY AS CAMPAIGN_INDUSTRY,
+        FIN.FIN_CORPORATE_NAMED_ACCOUNT_GROUP_NM AS BUSINESS_TIER,
+        NULLIF(UPPER(FIN.FIN_CC_FBD_SF_WWS_GEO), 'CORP') AS GEO,
+        FIN.FIN_CORPORATE_COUNTRY_NM AS COUNTRY,
+        FIN.FIN_GDPR_FLAG AS GDPR_FLAG,
+        FIN.FIN_SAP_PRODUCT_LINE AS SAP_PRODUCT_LINE,
+        FIN.FIN_PRODUCT AS PRODUCT,
+        FIN.FIN_PRODUCT_CLASS AS PRODUCT_CLASS,
+        FIN.FIN_PRODUCT_FAMILY AS PRODUCT_FAMILY,
+        FIN.FIN_PRODUCT_INDUSTRY AS PRODUCT_INDUSTRY,
+        FIN.FIN_CC_FBD_BSM_SALES_CH AS SALES_CHANNEL,
+        FIN.FIN_ORIGIN_SEGMENT AS ORIGIN_SEGMENT,
+        FIN.FIN_CC_FBM_TOTAL_ACV_NET3_CC,
+        FIN.FIN_CC_FBD_SF_FOX_RENEWAL_IND,
+        FIN.ACS_NEW_ACV,
+        FIN.ACS_NET_NEW_ACV,
+        FIN.ACS_EXPANSION_ACV,
+        FIN.ACS_RENEW_ACV,
+        FIN.ACS_INSTALLMENT_ACV,
+        FIN.CUSTOMER_PHASE,
+        FIN.ACV_SOURCE
+    FROM
+        {{ ref('FFM_LOWER_FUNNEL') }} FIN
+    INNER JOIN {{ ref('FFM_FIN_CALENDAR') }} CAL 
+        ON FIN.FIN_TRANSACTION_DT = CAL.DATE_KEY
+    WHERE LOWER(FIN.ACV_SOURCE) IN ('finmart integrated', 'acs core integrated', 'acs core unintegrated')
+        AND CAL.FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER >= -12 --Limits from last 12 completed quarters till last completed week of current quarter
+),
+-- Innovyze & M&A data is available only at week level
+INNOVYZE_MA AS (
+    SELECT DISTINCT
+        NULL AS FIN_SRC_ID,
+        NULL AS ECC_SALES_ORDER_NBR,
+        NULL AS TRANSACTION_DT,
+        CAL.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME,
+        CAL.MONTH_NUMBER_IN_FISCAL_YEAR,
+        CAL.WEEK_NUMBER_FISCAL_QUARTER,
+        CAL.FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER,
+        CAL.MONTH_START_DATE,
+        CAL.WEEK_START_DATE,
+        NULL AS CAMPAIGN_INDUSTRY,
+        NULL AS BUSINESS_TIER,
+        NULLIF(UPPER(FIN.FIN_CC_FBD_SF_WWS_GEO), 'CORP') AS GEO,
+        NULL AS COUNTRY,
+        NULL AS GDPR_FLAG,
+        NULL AS SAP_PRODUCT_LINE,
+        NULL AS PRODUCT,
+        FIN.FIN_PRODUCT_CLASS AS PRODUCT_CLASS,
+        FIN.FIN_PRODUCT_FAMILY AS PRODUCT_FAMILY,
+        FIN.FIN_PRODUCT_INDUSTRY AS PRODUCT_INDUSTRY,
+        FIN.FIN_CC_FBD_BSM_SALES_CH AS SALES_CHANNEL,
+        NULL AS ORIGIN_SEGMENT,
+        FIN.FIN_CC_FBM_TOTAL_ACV_NET3_CC,
+        FIN.FIN_CC_FBD_SF_FOX_RENEWAL_IND,
+        NULL AS ACS_NEW_ACV,
+        NULL AS ACS_NET_NEW_ACV,
+        NULL AS ACS_EXPANSION_ACV,
+        NULL AS ACS_RENEW_ACV,
+        NULL AS ACS_INSTALLMENT_ACV,
+        NULL AS CUSTOMER_PHASE,
+        FIN.ACV_SOURCE
+    FROM
+        {{ ref('FFM_LOWER_FUNNEL') }} FIN
+    INNER JOIN WEEK_CAL CAL
+        ON FIN.FIN_FY_AND_FQ_NAME = CAL.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME
+        AND FIN.FIN_WEEK_NUMBER_FISCAL_QUARTER = CAL.WEEK_NUMBER_FISCAL_QUARTER
+    WHERE FIN.ACV_SOURCE IN ('M&A Unintegrated', 'Innovyze Integrated', 'Innovyze Unintegrated')
+    GROUP BY ALL
+)
+
+SELECT
+    TRANSACTION_DT,
+    ECC_SALES_ORDER_NBR,
+    FISCAL_YEAR_AND_FISCAL_QUARTER_NAME,
+    MONTH_NUMBER_IN_FISCAL_YEAR,
+    WEEK_NUMBER_FISCAL_QUARTER,
+    MONTH_START_DATE,
+    WEEK_START_DATE,
+    FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER,
+    SAP_PRODUCT_LINE,
+    PRODUCT_CLASS,
+    PRODUCT,
+    PRODUCT_FAMILY,
+    PRODUCT_INDUSTRY,
+    CAMPAIGN_INDUSTRY,
+    BUSINESS_TIER,
+    GEO,
+    COUNTRY,
+    GDPR_FLAG,
+    SALES_CHANNEL,
+    ORIGIN_SEGMENT,
+    ACV_SOURCE,
+    SUM(FIN_CC_FBM_TOTAL_ACV_NET3_CC) AS TOTAL_ACV,
+    SUM(
+        CASE
+            WHEN ACV_SOURCE IN ('Finmart Integrated', 'Innovyze Integrated', 'Innovyze Unintegrated') AND UPPER(FIN_CC_FBD_SF_FOX_RENEWAL_IND) = 'NEW' THEN FIN_CC_FBM_TOTAL_ACV_NET3_CC
+            WHEN ACV_SOURCE ilike 'acs core%' THEN COALESCE(ACS_NEW_ACV, 0) + COALESCE(ACS_EXPANSION_ACV, 0)
+        END
+    ) AS NEW_BUSINESS_ACV,
+    SUM(
+        CASE
+            WHEN ACV_SOURCE = 'Finmart Integrated' AND CUSTOMER_PHASE IS NOT NULL AND UPPER(FIN_CC_FBD_SF_FOX_RENEWAL_IND) = 'NEW'
+                THEN FIN_CC_FBM_TOTAL_ACV_NET3_CC
+            WHEN ACV_SOURCE ilike 'acs core%' THEN COALESCE(ACS_NEW_ACV, 0) + COALESCE(ACS_NET_NEW_ACV, 0)
+        END
+    ) AS NEW_CUSTOMER_ACV,
+    COALESCE(TOTAL_ACV, 0) - COALESCE(NEW_BUSINESS_ACV, 0) AS RENEWAL_ACV,
+    COALESCE(NEW_BUSINESS_ACV, 0) - COALESCE(NEW_CUSTOMER_ACV, 0) AS EXPANSION_ACV,
+    CURRENT_TIMESTAMP AS RUN_TIMESTAMP
+FROM
+    (
+        SELECT * FROM FIN_INT_ACS
+        UNION ALL
+        SELECT * FROM INNOVYZE_MA
+    )
+GROUP BY
+    ALL
+

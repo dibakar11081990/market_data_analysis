@@ -1,0 +1,48 @@
+-- Thanks to venkatra for the awesome dbt hacks on snowflake
+/*
+  This materialization is used for creating stage objects.
+  The idea behind this materialization is for ability to define CREATE STAGE statements and have DBT the necessary logic
+  of deploying the table in a consistent manner and logic.
+*/
+
+{%- macro create_stage_stmt_fromfile(sql) -%}
+    {{ log("Creating stage " ~ this) }}
+    {{ sql }}
+{%- endmacro -%}
+
+
+{% materialization stage_definition, adapter='snowflake' %}
+    {%- set full_refresh_mode = (flags.FULL_REFRESH == True) -%}
+    {%- set identifier = this -%}
+
+
+    --------------------------------------------------------------------------------------------------------------------
+
+    -- setup
+    {{ run_hooks(pre_hooks, inside_transaction=False) }}
+
+    -- `BEGIN` happens here:
+    {{ run_hooks(pre_hooks, inside_transaction=True) }}
+
+
+    --------------------------------------------------------------------------------------------------------------------
+
+    -- build model
+    {%- call statement('main') -%}
+      {{ create_stage_stmt_fromfile(sql) }}
+    {%- endcall -%}
+
+
+
+   --------------------------------------------------------------------------------------------------------------------
+
+    {{ run_hooks(post_hooks, inside_transaction=True) }}
+
+    -- `COMMIT` happens here
+    {{ adapter.commit() }}
+
+    {{ run_hooks(post_hooks, inside_transaction=False) }}
+
+    {{ return({'relations': [identifier]  }) }}
+
+{%- endmaterialization %}

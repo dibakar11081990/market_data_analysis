@@ -1,0 +1,178 @@
+-- =============================================================================
+-- LAYER  : Gold — Business Fact
+-- SUBFOLDER: upper_funnel
+-- MODEL  : ffm_store_ecomm_traffic_qtrly
+-- =============================================================================
+{# Get the right stack database properties. #}
+{% set db_properties=get_dbproperties('fullfunnel') %}
+
+{# Set the database properties. #}
+{{ config(database=db_properties['database'], schema=db_properties['schema']) }}
+
+{# This table is deprecated as aggregation is at weekly level in Dashboard #}
+{# {{ config(tags=[var('TAG_FULL_FUNNEL_METRICS')]) }} #}
+
+{# Set the configuration #}
+{{
+    config(
+        materialized='incremental',
+        incremental_strategy='delete+insert',
+        unique_key='FY_QUARTER'
+    )
+}}
+
+{# Set the Post Hook configuration #}
+{# Delete records older than last 6 FY_QUARTER #}
+{{
+  config(
+    post_hook = [
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_ANALYST_MI",
+        "GRANT REFERENCES, SELECT ON TABLE {{ this }} TO ROLE BSM_MOT_ANALYST",
+        """{% if is_incremental() %}
+        DELETE FROM
+            {{ this }}
+        WHERE
+            FY_QUARTER < (
+                SELECT DISTINCT FY_QUARTER
+                FROM {{ this }}
+                ORDER BY 1 DESC
+                LIMIT 1 OFFSET 5 -- Picks last 6th quarter and delete older records
+            )
+        {% endif %}
+        """
+    ]
+  )
+}}
+
+WITH CALENDAR AS (
+    SELECT DISTINCT
+        FISCAL_YEAR_AND_FISCAL_QUARTER_NAME,
+        PREVIOUS_FYQUARTER,
+        PREVIOUS_YEAR_FYQUARTER
+    FROM
+        {{ ref('LOOKUP_FINANCE_CALENDAR') }}
+    WHERE FISCAL_QUARTERS_FROM_CURRENT_FISCAL_QUARTER >= -6 AND DATE_KEY < CURRENT_DATE
+),
+STORE_TRAFFIC AS (
+    SELECT
+        FISCAL_YEAR_AND_FISCAL_QUARTER_NAME AS FY_QUARTER,
+        NULLIF(VISITOR_GEO, '') AS GEO,
+        NULLIF(VISITOR_COUNTRY_NAME, '') AS COUNTRY,
+        GDPR_FLAG,
+        PRODUCT_FAMILY,
+        PRODUCT_INDUSTRY,
+        CASE WHEN LAST_TOUCH_CHANNEL NOT IN ('unknown', '') THEN LAST_TOUCH_CHANNEL END AS LAST_TOUCH_CHANNEL,
+        CAMPAIGN_INDUSTRY,
+        VISIT_ID,
+        'TOTAL_VISITS' AS METRIC
+    FROM
+        {{ ref('FFM_STORE_TRAFFIC') }}
+    WHERE
+        SEGMENT_TYPE LIKE 'eComm%'
+        AND AKN_FLAG = 'Without AKN'
+        AND V24_EXCL_404 = 'FALSE'
+        AND EXCLUDE_NXM_CHANNEL = 'FALSE'
+        AND EXCLUDE_MAX_MAYA = 'FALSE'
+        AND EXCLUDE_SEGMENT_IND = 0
+        AND FISCAL_YEAR_AND_FISCAL_QUARTER_NAME < (SELECT MAX(FISCAL_YEAR_AND_FISCAL_QUARTER_NAME) FROM {{ ref('FFM_STORE_TRAFFIC') }})
+        {% if is_incremental() %}
+        AND FISCAL_YEAR_AND_FISCAL_QUARTER_NAME > (SELECT MAX(FY_QUARTER) FROM {{ this }})  -- Filter records till last completed quarter for incremental runs
+        {% endif %}
+    UNION ALL
+    SELECT
+        FISCAL_YEAR_AND_FISCAL_QUARTER_NAME AS FY_QUARTER,
+        NULLIF(VISITOR_GEO, '') AS GEO,
+        NULLIF(VISITOR_COUNTRY_NAME, '') AS COUNTRY,
+        GDPR_FLAG,
+        PRODUCT_FAMILY,
+        PRODUCT_INDUSTRY,
+        CASE WHEN LAST_TOUCH_CHANNEL NOT IN ('unknown', '') THEN LAST_TOUCH_CHANNEL END AS LAST_TOUCH_CHANNEL,
+        CAMPAIGN_INDUSTRY,
+        VISIT_ID,
+        'CART_ADD_VISITS' AS METRIC
+    FROM
+        {{ ref('FFM_STORE_CART_ADD_VISITS') }}
+    WHERE IS_NBE_CART_ADD = FALSE
+        AND SEGMENT_TYPE LIKE 'eComm%'
+        AND AKN_FLAG = 'Without AKN'
+        AND V24_EXCL_404 = 'FALSE'
+        AND EXCLUDE_NXM_CHANNEL = 'FALSE'
+        AND EXCLUDE_MAX_MAYA = 'FALSE'
+        AND EXCLUDE_SEGMENT_IND = 0
+        AND FISCAL_YEAR_AND_FISCAL_QUARTER_NAME < (SELECT MAX(FISCAL_YEAR_AND_FISCAL_QUARTER_NAME) FROM {{ ref('FFM_STORE_CART_ADD_VISITS') }})
+        {% if is_incremental() %}
+        AND FISCAL_YEAR_AND_FISCAL_QUARTER_NAME > (SELECT MAX(FY_QUARTER) FROM {{ this }})  -- Filter records till last completed quarter for incremental runs
+        {% endif %}
+),
+AGGREGATED AS (
+    SELECT
+        T.FY_QUARTER, C.PREVIOUS_FYQUARTER, C.PREVIOUS_YEAR_FYQUARTER, T.GDPR_FLAG, T.GEO, T.COUNTRY, T.PRODUCT_FAMILY, T.PRODUCT_INDUSTRY, T.CAMPAIGN_INDUSTRY, T.LAST_TOUCH_CHANNEL,
+        COUNT(DISTINCT CASE WHEN T.METRIC = 'TOTAL_VISITS' THEN T.VISIT_ID END) AS VISITORS,
+        COUNT(DISTINCT CASE WHEN T.METRIC = 'CART_ADD_VISITS' THEN T.VISIT_ID END) AS CART_ADD_VISITORS,
+        CONCAT(
+            'QTR-GDPR-GEO',
+            IFF(GROUPING(T.COUNTRY) = 0, '-CNTRY', ''),
+            IFF(GROUPING(T.PRODUCT_FAMILY) = 0, '-PROD_FAM', ''),
+            IFF(GROUPING(T.PRODUCT_INDUSTRY) = 0, '-PROD_IND', ''),
+            IFF(GROUPING(T.CAMPAIGN_INDUSTRY) = 0, '-C_IND', ''),
+            IFF(GROUPING(T.LAST_TOUCH_CHANNEL) = 0, '-LTC', '')
+        ) AS AGGREGATED_BY
+    FROM
+        STORE_TRAFFIC T
+    LEFT JOIN CALENDAR C ON C.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME = T.FY_QUARTER
+    GROUP BY
+        T.FY_QUARTER, C.PREVIOUS_FYQUARTER, C.PREVIOUS_YEAR_FYQUARTER, T.GDPR_FLAG, T.GEO,
+        CUBE (T.COUNTRY, T.PRODUCT_FAMILY, T.PRODUCT_INDUSTRY, T.CAMPAIGN_INDUSTRY, T.LAST_TOUCH_CHANNEL)
+    UNION ALL
+    SELECT
+        T.FY_QUARTER, C.PREVIOUS_FYQUARTER, C.PREVIOUS_YEAR_FYQUARTER, T.GDPR_FLAG, NULL AS GEO, NULL AS COUNTRY, NULL AS PRODUCT_FAMILY, NULL AS PRODUCT_INDUSTRY, NULL AS CAMPAIGN_INDUSTRY, NULL AS LAST_TOUCH_CHANNEL,
+        COUNT(DISTINCT CASE WHEN T.METRIC = 'TOTAL_VISITS' THEN T.VISIT_ID END) AS VISITORS,
+        COUNT(DISTINCT CASE WHEN T.METRIC = 'CART_ADD_VISITS' THEN T.VISIT_ID END) AS CART_ADD_VISITORS,
+        'QTR-GDPR' AS AGGREGATED_BY
+    FROM
+        STORE_TRAFFIC T
+    LEFT JOIN CALENDAR C ON C.FISCAL_YEAR_AND_FISCAL_QUARTER_NAME = T.FY_QUARTER
+    GROUP BY
+        T.FY_QUARTER, C.PREVIOUS_FYQUARTER, C.PREVIOUS_YEAR_FYQUARTER, T.GDPR_FLAG
+)
+
+SELECT
+    A.FY_QUARTER,
+    A.GDPR_FLAG,
+    A.GEO,
+    A.COUNTRY,
+    A.PRODUCT_FAMILY,
+    A.PRODUCT_INDUSTRY,
+    A.CAMPAIGN_INDUSTRY,
+    A.LAST_TOUCH_CHANNEL,
+    A.VISITORS,
+    COALESCE(PQ.VISITORS, 0) AS QOQ_VISITORS,
+    COALESCE(PY.VISITORS, 0) AS YOY_VISITORS,
+    A.CART_ADD_VISITORS,
+    COALESCE(PQ.CART_ADD_VISITORS, 0) AS QOQ_CART_ADD_VISITORS,
+    COALESCE(PY.CART_ADD_VISITORS, 0) AS YOY_CART_ADD_VISITORS,
+    A.AGGREGATED_BY,
+    CURRENT_TIMESTAMP AS RUN_TIMESTAMP
+FROM
+    AGGREGATED A
+    LEFT JOIN AGGREGATED PQ --Join with previous quarter to get QoQ
+        ON A.PREVIOUS_FYQUARTER = PQ.FY_QUARTER
+        AND A.AGGREGATED_BY = PQ.AGGREGATED_BY
+        AND COALESCE(A.GDPR_FLAG, '') = COALESCE(PQ.GDPR_FLAG, '')
+        AND COALESCE(A.GEO, '') = COALESCE(PQ.GEO, '')
+        AND COALESCE(A.COUNTRY, '') = COALESCE(PQ.COUNTRY, '')
+        AND COALESCE(A.PRODUCT_FAMILY, '') = COALESCE(PQ.PRODUCT_FAMILY, '')
+        AND COALESCE(A.PRODUCT_INDUSTRY, '') = COALESCE(PQ.PRODUCT_INDUSTRY, '')
+        AND COALESCE(A.CAMPAIGN_INDUSTRY, '') = COALESCE(PQ.CAMPAIGN_INDUSTRY, '')
+        AND COALESCE(A.LAST_TOUCH_CHANNEL, '') = COALESCE(PQ.LAST_TOUCH_CHANNEL, '')
+    LEFT JOIN AGGREGATED PY --Join with previous year quarter to get YoY
+        ON A.PREVIOUS_YEAR_FYQUARTER = PY.FY_QUARTER
+        AND A.AGGREGATED_BY = PY.AGGREGATED_BY
+        AND COALESCE(A.GDPR_FLAG, '') = COALESCE(PY.GDPR_FLAG, '')
+        AND COALESCE(A.GEO, '') = COALESCE(PY.GEO, '')
+        AND COALESCE(A.COUNTRY, '') = COALESCE(PY.COUNTRY, '')
+        AND COALESCE(A.PRODUCT_FAMILY, '') = COALESCE(PY.PRODUCT_FAMILY, '')
+        AND COALESCE(A.PRODUCT_INDUSTRY, '') = COALESCE(PY.PRODUCT_INDUSTRY, '')
+        AND COALESCE(A.CAMPAIGN_INDUSTRY, '') = COALESCE(PY.CAMPAIGN_INDUSTRY, '')
+        AND COALESCE(A.LAST_TOUCH_CHANNEL, '') = COALESCE(PY.LAST_TOUCH_CHANNEL, '')
