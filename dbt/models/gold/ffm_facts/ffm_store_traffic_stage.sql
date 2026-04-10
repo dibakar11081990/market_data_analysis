@@ -271,8 +271,8 @@ WEB_ANALYTICS_ADOBE_ENRICHED_WITH_SEGMENT AS
 
         ,CASE
             WHEN (
-                LOWER(PAGE_NAME) = 'TATA:en:404'
-                AND REFERRER = 'https://knowledge.tata.com/'
+                LOWER(PAGE_NAME) = 'tredence_analytics:en:404'
+                AND REFERRER = 'https://knowledge.tredence_analytics.com/'
                 AND DT BETWEEN '2023-01-24' AND '2023-03-07'
                 ) THEN TRUE ELSE FALSE
         END AS v24_EXCL_404

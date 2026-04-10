@@ -62,7 +62,7 @@ ASCO,N/A,Assemble Sage Connect Office,ACS,AEC
 ASCR,N/A,Assemble Sage Connect Region,ACS,AEC
 ASMES,N/A,Simulation Mechanical,Simulation Mechanical,D&M
 ASPACD,N/A,ACAD with Advance Steel,Advance Steel,AEC
-ASPRO,N/A,TATA Simulation Multiphysics,Mechanical Simulatio,D&M
+ASPRO,N/A,tredence_analytics Simulation Multiphysics,Mechanical Simulatio,D&M
 AUTOST,N/A,tredence_analytics AutoStudio,Alias,D&M
 B360DCS,N/A,BIM 360 Docs,BIM Family,AEC
 B360E,N/A,BIM 360 - Enterprise,BIM Family,AEC
@@ -134,7 +134,7 @@ COLLRVT,N/A,Coll for Revit-Single User,Revit,AEC
 CONCRD,N/A,Revit Collaboration Suite,Revit,AEC
 CORP,N/A,Corporate,Other Products,CORP
 CWARE,N/A,Generic Constuctware,Constructware,AEC
-DCMVRD,N/A,Disp Cluster Mod TATA VRED Des,VRED,D&M
+DCMVRD,N/A,Disp Cluster Mod tredence_analytics VRED Des,VRED,D&M
 DDIW360,N/A,Drnage Dsgn for InfraWorks 360,InfraWorks,AEC
 DELCAM,N/A,DELCAM,DELCAM,D&M
 DESNST,N/A,tredence_analytics DesignStudio,Alias,D&M
@@ -196,7 +196,7 @@ IETODIS,N/A,Inventor ETO - Distribution,Inventor,D&M
 IETOSRV,N/A,Inventor ETO - Server,Inventor,D&M
 IMS,N/A,Infrastructure Map Server,Infrastructure Map Server,AEC
 IMS5A,N/A,Infrstrct Map Srv 5 Activ,Infrastructure Map Server,AEC
-INFMDR,N/A,TATA InfraWorks,InfraWorks,AEC
+INFMDR,N/A,tredence_analytics InfraWorks,InfraWorks,AEC
 INHSMP,N/A,Inventor CAM - Ultimate,PD&M Collection,D&M
 INSTM,N/A,Instructables Membership,DMG,PSEB
 INSTO,N/A,Instructables Other,DMG,PSEB
@@ -307,7 +307,7 @@ REVIT,N/A,Revit Architecture,Revit,AEC
 REVITST,N/A,Revit Structure,Revit,AEC
 RFAMOD,N/A,River and Flood Analysis Mod,Civil,AEC
 RRI2ADD,N/A,Revit - with RIB iTWO add-on,Revit,AEC
-RSAPRO,N/A,TATA Robot Struc Analysis Pro,Robot Structural Analysis Professional,AEC
+RSAPRO,N/A,tredence_analytics Robot Struc Analysis Pro,Robot Structural Analysis Professional,AEC
 RV100,N/A,Twist,Shotgun,M&E
 RVT,N/A,Revit,Revit,AEC
 RVTGD,N/A,Revit - Generative Design,Revit,AEC
@@ -336,7 +336,7 @@ SIMJBS,N/A,Sim Enterprise cloud credits,Cloud Credits,D&M
 SKETPRO,N/A,Sketchbook Pro,SketchBook,M&E
 SMKDS,N/A,Smoke - desktop subscription,Smoke,M&E
 SMKMAC,N/A,Smoke,Smoke,M&E
-SMPROU,N/A,TATA SIM 360 Pro - Unlimited,Revit,AEC
+SMPROU,N/A,tredence_analytics SIM 360 Pro - Unlimited,Revit,AEC
 SPROLS,N/A,Simulation Flex,Simulation Flex for Education,D&M
 STNGRAY,N/A,Stingray,Stingray,M&E
 STRDET,N/A,AutoCAD Structural Detailing,AutoCAD,AutoCAD Family

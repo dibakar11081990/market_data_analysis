@@ -75,10 +75,10 @@ snowflake_warehouse = 'BSM_QUERY'
 snowflake_role = 'BSM_DEVELOPER'
 TARGET_TABLE = 'INSTAGRAM_POST_DATA'
 region_name = "us-east-1"
-tags_bucket = "com.tata.marketing.mars.prd.ue1.matillion-data"
+tags_bucket = "com.tredence_analytics.marketing.mars.prd.ue1.matillion-data"
 
 
-bucket = 'com.tata.marketing.mars.dev.ue1.matillion-data'
+bucket = 'com.tredence_analytics.marketing.mars.dev.ue1.matillion-data'
 #Dynamically setting the S3 key or prefix
 if os.environ['ENVIRONMENT'] == 'prd':
     key =  'sprout/dt='+date+'/instagram_post_data.csv' 

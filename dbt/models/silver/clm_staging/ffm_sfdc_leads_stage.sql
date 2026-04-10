@@ -284,8 +284,8 @@ LEADS_SUBSET AS (
                 THEN 'Tele Vendor'
             WHEN LOWER(ua.ACCOUNT_TYPE) = 'distributor' OR LOWER(ua.PARTNER_TYPE) = 'distributor'
                 THEN 'Distributor'
-            WHEN LOWER(ua.ACCOUNT_NAME) LIKE '%tata%'
-                THEN 'tata'
+            WHEN LOWER(ua.ACCOUNT_NAME) LIKE '%tredence_analytics%'
+                THEN 'tredence_analytics'
             WHEN LOWER(ua.ACCOUNT_TYPE) IN ('reseller', 'master reseller') OR LOWER(ua.PARTNER_TYPE) IN ('reseller', 'master reseller')
                 THEN 'Partner/reseller'
             WHEN LOWER(ua.PARTNER_TYPE) = 'isv'
@@ -294,8 +294,8 @@ LEADS_SUBSET AS (
                 THEN 'Tele Vendor'
             WHEN LOWER(p.TYPE) = 'distributor' OR LOWER(p.PARTNER_TYPE__C) = 'distributor'
                 THEN 'Distributor'
-            WHEN LOWER(p.NAME) LIKE '%tata%'
-                THEN 'tata'
+            WHEN LOWER(p.NAME) LIKE '%tredence_analytics%'
+                THEN 'tredence_analytics'
             WHEN LOWER(p.TYPE) IN ('reseller', 'master reseller') OR LOWER(p.PARTNER_TYPE__C) IN ('reseller', 'master reseller')
                 THEN 'Partner/reseller'
             WHEN LOWER(p.PARTNER_TYPE__C) = 'isv'
@@ -304,7 +304,7 @@ LEADS_SUBSET AS (
                 THEN 'Partner/reseller'
             WHEN LOWER(ua.FULL_NAME) IN ('opty admin queue')
                 THEN 'Partner/reseller'
-            ELSE 'tata'
+            ELSE 'tredence_analytics'
         END AS ADSK_PARTNER_TV_FLAG,
         CASE
             -- added new changes for GreenField MOTMDSA2336

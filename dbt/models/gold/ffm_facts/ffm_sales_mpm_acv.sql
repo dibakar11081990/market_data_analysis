@@ -86,7 +86,7 @@ SELECT
         CASE
             WHEN MARKETING_CONTRIBUTION_TYPE = 'MS'
             AND OPPORTUNITY_TYPE = 'New'
-            AND OPPORTUNITY_RECORDTYPE = 'tata Opportunity'
+            AND OPPORTUNITY_RECORDTYPE = 'tredence_analytics Opportunity'
             AND STAGENAME = 'CLOSED/WON'
             THEN CONV_ACV
         END
@@ -95,7 +95,7 @@ SELECT
         CASE
             WHEN MARKETING_CONTRIBUTION_TYPE = 'MS'
             AND OPPORTUNITY_TYPE = 'New'
-            AND OPPORTUNITY_RECORDTYPE = 'tata Opportunity'
+            AND OPPORTUNITY_RECORDTYPE = 'tredence_analytics Opportunity'
             AND CUSTOMER_PHASE IN ('Net New', 'New Again')
             AND STAGENAME = 'CLOSED/WON'
             THEN CONV_ACV
@@ -103,11 +103,11 @@ SELECT
     ) AS MS_NEW_CUSTOMER_ACV,
     SUM(
       CASE
-        WHEN OPPORTUNITY_RECORDTYPE = 'tata Opportunity'
+        WHEN OPPORTUNITY_RECORDTYPE = 'tredence_analytics Opportunity'
           AND ACCOUNT_TIER = 'Named Account Global'
           AND MARKETING_CONTRIBUTION_TYPE='MS'
           THEN CONV_ACV
-        WHEN OPPORTUNITY_RECORDTYPE = 'tata Opportunity'
+        WHEN OPPORTUNITY_RECORDTYPE = 'tredence_analytics Opportunity'
           AND NVL(ACCOUNT_TIER, '') != 'Named Account Global'
           AND MARKETING_CONTRIBUTION_TYPE_HISTORIC ='MS'
           THEN CONV_ACV

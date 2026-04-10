@@ -72,7 +72,7 @@ snowflake_warehouse = 'BSM_QUERY'
 snowflake_role = 'BSM_DEVELOPER'
 TARGET_TABLE = 'YOUTUBE_PROFILE_DATA' 
 
-bucket = 'com.tata.marketing.mars.prd.ue1.matillion-data'
+bucket = 'com.tredence_analytics.marketing.mars.prd.ue1.matillion-data'
 #Dynamically setting the S3 key or prefix
 if os.environ['ENVIRONMENT'] == 'prd':
     key =  'sprout/dt='+date+'/youtube_profile_data.csv' 

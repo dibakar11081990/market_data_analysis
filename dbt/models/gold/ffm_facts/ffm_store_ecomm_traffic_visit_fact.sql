@@ -137,7 +137,7 @@ STORE_TRAFFIC AS (
         AND EXCLUDE_NXM_CHANNEL = 'FALSE'
         AND EXCLUDE_MAX_MAYA = 'FALSE'
         AND EXCLUDE_SEGMENT_IND = 0
-        AND PAGE_NAME NOT ILIKE '%TATA:signin%'
+        AND PAGE_NAME NOT ILIKE '%tredence_analytics:signin%'
         {% if is_incremental() %}
         -- Filter for incremental runs
         -- Filter records after last processed and till last completed week for incremental runs
@@ -192,7 +192,7 @@ STORE_TRAFFIC AS (
         AND EXCLUDE_NXM_CHANNEL = 'FALSE'
         AND EXCLUDE_MAX_MAYA = 'FALSE'
         AND EXCLUDE_SEGMENT_IND = 0
-        AND PAGE_NAME NOT ILIKE '%TATA:signin%'
+        AND PAGE_NAME NOT ILIKE '%tredence_analytics:signin%'
         {% if is_incremental() %}
         -- Filter for incremental runs
         -- Filter records after last processed and till last completed week for incremental runs

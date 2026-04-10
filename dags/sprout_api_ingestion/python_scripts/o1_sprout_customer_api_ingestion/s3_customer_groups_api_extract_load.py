@@ -52,7 +52,7 @@ def customer_group_data_extract_load():
 
     
     #s3 bucket details
-    bucket = 'com.tata.marketing.mars.prd.ue1.matillion-data'
+    bucket = 'com.tredence_analytics.marketing.mars.prd.ue1.matillion-data'
     
     #Dynamically setting the S3 key or prefix
     if os.environ['ENVIRONMENT'] == 'prd':

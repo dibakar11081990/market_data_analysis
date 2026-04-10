@@ -41,7 +41,7 @@ WITH LEADS AS (
     WHERE
         VALID_LEAD_FLAG = 'Y'
     AND LEAD_TYPE IN ('MGL', 'MQL')
-    AND ADSK_PARTNER_TV_FLAG = 'tata'
+    AND ADSK_PARTNER_TV_FLAG = 'tredence_analytics'
     AND LEAD_NAG_KEY NOT IN ('Named Account', 'Named Account Global', 'Enterprise Account')
     UNION
     SELECT
