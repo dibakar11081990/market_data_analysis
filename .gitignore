@@ -1,11 +1,9 @@
 .git
-.env
 *.py[cod]
 __pycache__/
 .idea/
 .python-version
 .DS_Store
-airflow_settings.yaml
 logs
 .pytest_cache
 .vscode/

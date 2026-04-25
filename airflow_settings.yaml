@@ -1,0 +1,79 @@
+# This file allows you to configure Airflow Connections, Pools, and Variables in a single place for local development only.
+# NOTE: json dicts can be added to the conn_extra field as yaml key value pairs. See the example below.
+
+# For more information, refer to our docs: https://www.astronomer.io/docs/astro/cli/develop-project#configure-airflow_settingsyaml-local-development-only
+# For questions, reach out to: https://support.astronomer.io
+# For issues create an issue ticket here: https://github.com/astronomer/astro-cli/issues
+
+airflow:
+  connections:
+    - conn_id: snowflake_conn_dev
+      conn_type: snowflake
+      conn_host: tredence_analytics.us-east-1
+      conn_schema: SANDBOX
+      conn_login: XXXXXXXXXXXX
+      conn_password: XXXXXXXXXXXX
+      conn_port: 
+      conn_extra: 
+        extra__snowflake__account: tredence_analytics.us-east-1
+        extra__snowflake__warehouse: DEMO_WAREHOUSE
+        extra__snowflake__database: DEV
+        extra__snowflake__region: us-east-1
+        extra__snowflake__role: DEVELOPER
+        extra__snowflake__insecure_mode: true
+        account: tredence_analytics.us-east-1
+        warehouse: DEMO_WAREHOUSE
+        role: DEVELOPER
+        database: DEV
+        region: us-east-1
+        insecure_mode: true
+    - conn_id: aws_default
+      conn_type: aws
+      conn_login: XXXXXXXXXXXX
+      conn_password: ULuh+XXXXXXXXXXXX
+    - conn_id: mars.dev.Slack_Conn
+      conn_type: slackwebhook
+      conn_host: https://hooks.slack.com/services/XXXXXXXXXXXX/XXXXXXXXXXXX/XXXXXXXXXXXX
+      conn_extra:
+        webhook_token: XXXXXXXXXXXX/XXXXXXXXXXXX/XXXXXXXXXXXX
+    - conn_id: sixsense
+      conn_type: ssh
+      conn_host: sftp.6sense.com
+      conn_login: tredence_analytics
+      conn_password: XXXXXXXXXXXX
+      conn_port: 22
+
+  pools:
+    - pool_name:
+      pool_slot:
+      pool_description:
+  variables:
+    - variable_name: sfdc_ingestion_settings
+      variable_value: '{ "automated": true }'
+    - variable_name: spend_settings
+      variable_value: '{ "end_date": 20220215, "historic_refresh": false, "start_date": 20220215 }'
+    - variable_name: DBND_AIRFLOW_INSTANCE_UUID
+      variable_value: "XXXXXXXXXXXX"
+    - variable_name: abacus_model_trigger
+      variable_value: '{"api_key": "XXXXXXXXXXXX", "automated_model_trigger": true, "pipeline_id": "1447951982" }'
+    - variable_name: activity_marketo_intraday_settings
+      variable_value: '{"ACTIVITYDATE": "2025-10-13", "DT": "20251102", "MKTO_DATE": "2025-10-13", "manual_backfill": "false", "run_type": "daily_load" }'
+    - variable_name: activity_marketo_v2_driver_ingestion_setting
+      variable_value: "{\"activity_marketo_historic_refresh\" : False, \"formfill_historic_refresh\" : False, \"activity_formfield_historical_refresh\" : False, \"backfill\": True, \"backfill_date\": 20250901}"
+    - variable_name: core_datasets_settings
+      variable_value: '{"lead_src_flag_cnt_max": 22000000, "lead_src_flag_cnt_min": 19000000, "marketo_src_flag_cnt_max": 22000000, "marketo_src_flag_cnt_min": 17000000 }'
+    - variable_name: lead_marketo_intraday_settings
+      variable_value: '{"MKTO_DT": "20250907", "cutoff_hour": 6, "manual_backfill": "false", "src_flag_cnt_max": 22000000, "src_flag_cnt_min": 19000000 }'
+    - variable_name: marketo_automated_ingestion_intraday_previous_dt_settings
+      variable_value: '{"emr": {"CoreInstanceType": "m5a.4xlarge", "CoreNodeCount": 2, "MasterInstanceType": "m5a.2xlarge", "ShutdownCluster": true }, "ingestion": {"cutoff_hour": 7, "cutoff_min": 15, "end_date": "20251217", "job_run_id": 579, "skip_evt_stack": false, "skip_id_stack": false, "skip_lead_marketo": false, "split_job_bymonth": true, "start_date": "20251217" } }'
+    - variable_name: marketo_automated_ingestion_intraday_settings
+      variable_value: '{"emr": {"CoreInstanceType": "m5a.4xlarge", "CoreNodeCount": 2, "MasterInstanceType": "m5a.2xlarge", "ShutdownCluster": true }, "ingestion": {"cutoff_hour": 7, "cutoff_min": 15, "end_date": "20251217", "job_run_id": 579, "skip_evt_stack": false, "skip_id_stack": true, "skip_lead_marketo": true, "split_job_bymonth": true, "start_date": "20251217" } }'
+    - variable_name: mpm_fact_settings
+      variable_value: '{"dev_copy": false, "end_date": 20250430, "full_refresh": false, "historic_refresh": false, "start_date": 20200201 }'
+    - variable_name: LEAD_MARKETO_SETTINGS
+      variable_value: '{"end_date": "20250803", "historic_refresh": false, "start_date": "20250803"}'
+    - variable_name: gdg_email_inputs
+      variable_value: '{"end_date": "20220614", "historic_refresh": false, "start_date": "20210501"}'
+
+
+    
