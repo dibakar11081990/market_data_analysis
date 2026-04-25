@@ -10,9 +10,15 @@ from datetime import datetime, timedelta
 # Airflow
 from airflow.hooks.base import BaseHook
 from airflow.models import DAG, Variable
-from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import BranchPythonOperator
+
+# Cosmos — replaces BashOperator-based dbt execution;
+# renders each dbt model matching the tag selector as its own Airflow task
+from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, RenderConfig, ExecutionConfig
+# maps the existing Airflow Snowflake connection to a dbt profile at runtime,
+# avoiding raw credential injection into env vars or bash strings
+from cosmos.profiles import SnowflakeUserPasswordProfileMapping
 
 # Local / custom
 from dags.common.py.airflow.callbacks.callback_failure_notification import callback_failure_notification
@@ -25,7 +31,6 @@ from dags.full_funnel_metrics.utils import (
     MARKETABILITY_SQL,
     POLARIS_SQL,
     REVMART_SQL,
-    generate_dbt_command,
 )
 
 # ---------------------------------------------------------------------------
@@ -35,14 +40,6 @@ from dags.full_funnel_metrics.utils import (
 ENVIRONMENT = 'dev' if os.environ['ENVIRONMENT'].lower() == 'stg' else os.environ['ENVIRONMENT']
 SNOWFLAKE_CONNECTION_ID = os.environ['SNOWFLAKE_CONN']
 snowflake_connection = BaseHook.get_connection(SNOWFLAKE_CONNECTION_ID)
-
-SNOWFLAKE_ENV = {
-    "SNOWFLAKE_PASSWORD": snowflake_connection.password,
-    "SNOWFLAKE_USER": snowflake_connection.login,
-    "SNOWFLAKE_ACCOUNT": snowflake_connection.extra_dejson.get(
-        'account', "tredence_analytics.us-east-1"
-    ),
-}
 
 SKIP_POST_CHECKS_TASK_ID = "SKIPPING_FFM_POST_CHECKS"
 
@@ -62,7 +59,47 @@ default_args = {
 }
 
 # ---------------------------------------------------------------------------
-# Sensor definitions: (task_id config key, SQL query)
+# Cosmos configuration
+# ---------------------------------------------------------------------------
+
+# tells cosmos which Airflow connection to use and how to map it to a dbt Snowflake profile
+profile_config = ProfileConfig(
+    profile_name=config['dbt_profile'],
+    target_name=ENVIRONMENT,
+    profile_mapping=SnowflakeUserPasswordProfileMapping(
+        conn_id=SNOWFLAKE_CONNECTION_ID,
+        profile_args={
+            "account": snowflake_connection.extra_dejson.get(
+                'account', "tredence_analytics.us-east-1"
+            )
+        },
+    ),
+)
+
+# points cosmos at the dbt project on disk
+project_config = ProjectConfig(
+    dbt_project_path="/usr/local/airflow/dbt/mars_dbt/",
+)
+
+# points cosmos at the dbt binary inside the virtual environment
+execution_config = ExecutionConfig(
+    dbt_executable_path="/usr/local/airflow/dbt_venv/bin/dbt",
+)
+
+
+def dbt_task_group(task_key: str, tag_key: str) -> DbtTaskGroup:
+    """Factory that binds the three shared cosmos configs; call-sites only pass what varies."""
+    return DbtTaskGroup(
+        group_id=config["tasks"][task_key],
+        project_config=project_config,
+        profile_config=profile_config,
+        execution_config=execution_config,
+        render_config=RenderConfig(select=[config['tags'][tag_key]]),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Sensor definitions: (task_id, SQL query)
 # ---------------------------------------------------------------------------
 
 SENSOR_SPECS = [
@@ -99,47 +136,34 @@ with DAG(
         for task_id, sql in SENSOR_SPECS
     ]
 
-    ffm_dbt_run_workflow = BashOperator(
-        task_id=config["tasks"]["TASK_DBT_RUN_FFM"],
-        bash_command=generate_dbt_command(
-            operation='run',
-            model=config['tags']['DBT_TAG_FFM'],
-            profile=config['dbt_profile'],
-            env=SNOWFLAKE_ENV,
-        ),
-    )
+    ffm_dbt_run = dbt_task_group("TASK_DBT_RUN_FFM", "DBT_TAG_FFM")
 
     def choose_to_run_post_checks_task():
         """Return the next task ID based on the Airflow Variable flag."""
         val = Variable.get(config['RUN_POST_CHECKS_VARIABLE'], default_var="False").strip().lower()
-        return config['TASK_DBT_POST_REFRESH_TESTS_FFM'] if val == "true" else SKIP_POST_CHECKS_TASK_ID
+        return config['tasks']['TASK_DBT_POST_REFRESH_TESTS_FFM'] if val == "true" else SKIP_POST_CHECKS_TASK_ID
 
     run_post_checks_branch = BranchPythonOperator(
         task_id="RUN_POST_CHECKS_BRANCH",
         python_callable=choose_to_run_post_checks_task,
     )
 
-    ffm_post_check_skip_task = BashOperator(
-        task_id=SKIP_POST_CHECKS_TASK_ID,
-        bash_command="echo ':::::: Tests cases skipped for FFM ::::::'",
+    ffm_post_check_skip = DummyOperator(task_id=SKIP_POST_CHECKS_TASK_ID)
+
+    # Gate task: branch operator targets this task_id; the DbtTaskGroup follows it
+    # so it inherits the "skipped" state when the branch goes to ffm_post_check_skip.
+    ffm_post_check_gate = DummyOperator(
+        task_id=config["tasks"]["TASK_DBT_POST_REFRESH_TESTS_FFM"],
     )
 
-    ffm_post_check_test_workflow = BashOperator(
-        task_id=config["tasks"]["TASK_DBT_POST_REFRESH_TESTS_FFM"],
-        bash_command=generate_dbt_command(
-            operation='test',
-            model=config['DBT_TAG_FFM_POST_CHECKS'],
-            profile=config['dbt_profile'],
-            env=SNOWFLAKE_ENV,
-        ),
-    )
+    ffm_post_check_tests = dbt_task_group("TASK_POST_CHECKS_GROUP", "DBT_TAG_FFM_POST_CHECKS")
 
     slack_success_alert_task = task_success_slack_alert(dag=dag)
 
     end = DummyOperator(task_id='WORKFLOW_END')
 
     # DAG flow
-    start >> sensors >> ffm_dbt_run_workflow
-    ffm_dbt_run_workflow >> run_post_checks_branch
-    run_post_checks_branch >> [ffm_post_check_skip_task, ffm_post_check_test_workflow]
-    [ffm_post_check_skip_task, ffm_post_check_test_workflow] >> slack_success_alert_task >> end
+    start >> sensors >> ffm_dbt_run >> run_post_checks_branch
+    run_post_checks_branch >> [ffm_post_check_skip, ffm_post_check_gate]
+    ffm_post_check_gate >> ffm_post_check_tests
+    [ffm_post_check_skip, ffm_post_check_tests] >> slack_success_alert_task >> end

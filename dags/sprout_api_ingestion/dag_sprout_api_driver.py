@@ -3,12 +3,17 @@
 # This version uses dynamic task generation to reduce code duplication
 """
 
-from airflow.operators.bash_operator import BashOperator
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.task_group import TaskGroup
 from airflow.hooks.base import BaseHook
+# cosmos imports — replaces BashOperator-based dbt execution;
+# renders each dbt model matching the tag selector as its own Airflow task
+from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, RenderConfig, ExecutionConfig
+# maps the existing Airflow Snowflake connection to a dbt profile at runtime,
+# avoiding raw credential injection into env vars or bash strings
+from cosmos.profiles import SnowflakeUserPasswordProfileMapping
 
 from datetime import datetime, timedelta
 import os
@@ -17,7 +22,7 @@ import os
 from dags.common.py.airflow.callbacks.callback_failure_notification import callback_failure_notification
 from dags.common.py.notifications.slack_alert import task_success_slack_alert
 from dags.sprout_api_ingestion.configs import load_config
-from dags.sprout_api_ingestion.utils import generate_dbt_command, make_runner
+from dags.sprout_api_ingestion.utils import make_runner
 
 # Script imports
 from dags.sprout_api_ingestion.python_scripts.o1_sprout_customer_api_ingestion.s1_customer_data_api_extract_load import customer_data_extract_load
@@ -41,6 +46,35 @@ snowflake_connection = BaseHook.get_connection(SNOWFLAKE_CONNECTION_ID)
 now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=7)
 config = load_config()
 
+# snowflake_env dict removed — cosmos reads credentials from the Airflow connection
+# directly via SnowflakeUserPasswordProfileMapping, so passwords are never exposed
+# in operator environment variables or bash command strings
+
+# tells cosmos which Airflow connection to use and how to map it to a dbt Snowflake profile
+profile_config = ProfileConfig(
+    profile_name=config['dbt_profile'],
+    target_name=ENVIRONMENT,
+    profile_mapping=SnowflakeUserPasswordProfileMapping(
+        conn_id=SNOWFLAKE_CONNECTION_ID,
+        profile_args={
+            "account": snowflake_connection.extra_dejson.get(
+                'account', "tredence_analytics.us-east-1"
+            )
+        },
+    ),
+)
+
+# points cosmos at the dbt project on disk — same path previously hard-coded
+# inside generate_dbt_command in utils/helpers.py
+project_config = ProjectConfig(
+    dbt_project_path="/usr/local/airflow/dbt/mars_dbt/",
+)
+
+# points cosmos at the dbt binary inside the virtual environment
+execution_config = ExecutionConfig(
+    dbt_executable_path="/usr/local/airflow/dbt_venv/bin/dbt",
+)
+
 default_args = {
     'owner': config["dag"]["owner"],
     'email_on_failure': False,
@@ -59,7 +93,6 @@ def create_python_operator_from_callable(task_id, callable_func, dag):
         task_id=task_id,
         python_callable=callable_func,
         provide_context=True,
-        dag=dag,
     )
 
 def create_python_operator_from_script(task_id, script_path, dag):
@@ -68,20 +101,17 @@ def create_python_operator_from_script(task_id, script_path, dag):
         task_id=task_id,
         python_callable=make_runner(script_path),
         provide_context=True,
-        dag=dag,
     )
 
-def create_dbt_operator(task_id, model_tag, dag):
-    """Factory function for DBT BashOperators with consistent config"""
-    dbt_env = {
-        "SNOWFLAKE_PASSWORD": snowflake_connection.password,
-        "SNOWFLAKE_USER": snowflake_connection.login,
-        "SNOWFLAKE_ACCOUNT": snowflake_connection.extra_dejson['account'],
-    }
-    return BashOperator(
-        task_id=task_id,
-        bash_command=generate_dbt_command(operation='run', model=model_tag, profile='mpm'),
-        env=dbt_env,
+def dbt_task_group(group_id: str, tag: str) -> DbtTaskGroup:
+    # factory that binds the three shared cosmos configs so call-sites only
+    # pass what actually varies: the task group name and the dbt tag selector
+    return DbtTaskGroup(
+        group_id=group_id,
+        project_config=project_config,
+        profile_config=profile_config,
+        execution_config=execution_config,
+        render_config=RenderConfig(select=[tag]),
     )
 
 # ==================== DAG DEFINITION ====================
@@ -152,34 +182,28 @@ with DAG(
     )
 
     # ==================== DBT TASKS ====================
-    with TaskGroup(group_id="dbt_run_tasks_group") as dbt_run_tasks:
-        
-        # Define DBT tasks with model tags
-        dbt_tasks = {
-            'DBT_RUN_CUSTOMER_API_INGESTION': 'tag:sprout_customer_api_ingestion',
-            'DBT_RUN_CUSTOMER_PROFILE_INGESTION': 'tag:sprout_customer_profile_ingestion',
-            'DBT_RUN_CUSTOMER_POST_INGESTION': 'tag:sprout_customer_post_ingestion',
-            'DBT_RUN_FACT_INGESTION': 'tag:sprout_fact_ingestion',
-        }
-        
-        dbt_operators = {}
-        for task_id, model_tag in dbt_tasks.items():
-            dbt_operators[task_id] = create_dbt_operator(task_id, model_tag, dag)
-        
-        # Define task order
-        (dbt_operators['DBT_RUN_CUSTOMER_API_INGESTION'] >> 
-         dbt_operators['DBT_RUN_CUSTOMER_PROFILE_INGESTION'] >> 
-         dbt_operators['DBT_RUN_CUSTOMER_POST_INGESTION'] >> 
-         dbt_operators['DBT_RUN_FACT_INGESTION'])
+    # outer TaskGroup removed — each DbtTaskGroup is itself a task group in the Airflow UI,
+    # so the extra wrapper added nesting without benefit
+    dbt_customer_api_ingestion      = dbt_task_group("DBT_RUN_CUSTOMER_API_INGESTION",     "tag:sprout_customer_api_ingestion")
+    dbt_customer_profile_ingestion  = dbt_task_group("DBT_RUN_CUSTOMER_PROFILE_INGESTION",  "tag:sprout_customer_profile_ingestion")
+    dbt_customer_post_ingestion     = dbt_task_group("DBT_RUN_CUSTOMER_POST_INGESTION",     "tag:sprout_customer_post_ingestion")
+    dbt_fact_ingestion              = dbt_task_group("DBT_RUN_FACT_INGESTION",              "tag:sprout_fact_ingestion")
 
     # ==================== FINAL TASKS ====================
     slack_success_alert_task = task_success_slack_alert(dag=dag)
     end = DummyOperator(task_id="END")
 
     # ==================== DAG FLOW ====================
-    start >> o1_sprout_customer_api_ingestion >> \
-        o2_sprout_customer_profile_ingestion >> \
-        o3_sprout_customer_post_ingestion >> \
-        o4_delete_from_prod >> \
-        dbt_run_tasks >> \
-        slack_success_alert_task >> end
+    (
+        start
+        >> o1_sprout_customer_api_ingestion
+        >> o2_sprout_customer_profile_ingestion
+        >> o3_sprout_customer_post_ingestion
+        >> o4_delete_from_prod
+        >> dbt_customer_api_ingestion
+        >> dbt_customer_profile_ingestion
+        >> dbt_customer_post_ingestion
+        >> dbt_fact_ingestion
+        >> slack_success_alert_task
+        >> end
+    )
