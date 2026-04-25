@@ -1,5 +1,3 @@
-low-code-dags==6.4.0
-low-code-transform==3.5.2
 dbt-core==1.9.8
 requests==2.31
 flake8==5.0.4
@@ -32,6 +30,7 @@ loguru==0.7.3
 apache-airflow-providers-slack[common.compat]==9.0.5
 scikit-learn==1.4.2
 apache-airflow-providers-http
+astronomer-cosmos
 
 
 # Airflow + Google stack dependency fix
